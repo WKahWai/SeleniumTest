@@ -15,7 +15,8 @@ namespace SeleniumTest.SeleniumHelpers
     {
         InternetExplorer,
         Chrome,
-        Firefox
+        Firefox,
+        HTTP
     }
 
     public class DriverFactory
@@ -30,12 +31,12 @@ namespace SeleniumTest.SeleniumHelpers
             }
         }
 
-        public IWebDriver Create()
+        public IWebDriver Create(DriverToUse driverToUse = DriverToUse.HTTP)
         {
             IWebDriver driver;
-            var driverToUse = ConfigurationHelper.Get<DriverToUse>("DriverToUse");
+            //var driverToUse = ConfigurationHelper.Get<DriverToUse>("DriverToUse");
             var chromeOptions = new ChromeOptions();
-            chromeOptions.AddArguments("headless");
+            //chromeOptions.AddArguments("headless");
 
             switch (driverToUse)
             {
@@ -51,7 +52,8 @@ namespace SeleniumTest.SeleniumHelpers
                     driver = new ChromeDriver(chromeOptions);
                     break;
                 default:
-                    throw new ArgumentOutOfRangeException();
+                    driver = null;
+                    break;
             }
 
             driver.Manage().Window.Maximize();

@@ -7,6 +7,10 @@ using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Web.Http;
+using System.Threading;
+using SeleniumTest.Models;
+using System.Linq;
+using SeleniumTest.Banks.Core;
 
 namespace SeleniumTest.Controllers
 {
@@ -17,34 +21,42 @@ namespace SeleniumTest.Controllers
         private string _baseUrl;
 
         // GET api/values
-        public IEnumerable<string> Get()
+        [HttpGet]
+        public JsonResponse List()
         {
-            return new string[] { "value1", "value2" };
+            List<string> list = Enum.GetValues(typeof(Bank)).Cast<Bank>().Select(c => c.ToString()).ToList();
+            //return JsonResponse.success(list, "Request successful");
+            return JsonResponse.success(new TransferParam(),"");
         }
 
         // GET api/values/5
         public string Get(int id)
         {
-            _driver = new DriverFactory().Create();
-            _baseUrl = ConfigurationHelper.Get<string>("TargetUrl");
+            //_driver = new DriverFactory().Create();
+            //_driver.Url = "https://www.dropbox.com/zh_TW/";
+            ////_driver.Navigate();
+            //Thread.Sleep(3000);
+            //_driver.FindElement(By.Id("sign-up-in")).Click();
+            //_driver.FindElement(By.Name("login_email")).SendKeys("alanee1996@gmail.com");
+            //_driver.FindElement(By.Name("login_password")).SendKeys("Esy101045600A");
+            //var checkbox = _driver.FindElement(By.Name("remember_me"));
+            //if (!checkbox.Selected) checkbox.Click();
+            //_driver.FindElement(By.XPath("//button[@type='submit']")).Click();
 
-            _driver.Navigate().GoToUrl(_baseUrl);
+            //_driver.Quit();
 
-            var data = _driver.PageSource;
-            var data2 = _driver.FindElement(By.ClassName("gLFyf"));
-            Random Rnd = new Random();
-            data2.SendKeys("Test" + char.ConvertFromUtf32(Rnd.Next(65, 90)));
-            var data3 = _driver.FindElement(By.CssSelector("input[aria-label=\"Google Search\"]"));
-            data3.Click();
-            var data4 = "Rnd" + Environment.NewLine + _driver.PageSource;
-
-            System.IO.File.WriteAllText(@"C:\Users\Kah Wai\Desktop\" + char.ConvertFromUtf32(Rnd.Next(65, 90)) + ".txt", data4);
-
-            _driver.Quit();
-
-            return data4;
+            return "yes";
         }
 
+        [HttpPost]
+        public JsonResponse Transfer([FromBody] TransferParam param)
+        {
+            using (BankBase bank = BankBase.GetBank(param))
+            {
+                var result = bank.Start();
+                return result.Code != 0 ? JsonResponse.failed("Have error occurred", result) : JsonResponse.success(result, "Request sucessful");
+            }
+        }
         // POST api/values
         public void Post([FromBody]string value)
         {

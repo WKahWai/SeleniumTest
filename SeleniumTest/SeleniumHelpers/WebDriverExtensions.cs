@@ -1,4 +1,6 @@
 ﻿using OpenQA.Selenium;
+using OpenQA.Selenium.Chrome;
+using OpenQA.Selenium.IE;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -42,6 +44,30 @@ namespace SeleniumTest.SeleniumHelpers
             var result = ((IJavaScriptExecutor)driver).ExecuteScript(
                 (selector.StartsWith(ret, StringComparison.InvariantCultureIgnoreCase) ? string.Empty : ret) + selector);
             return result as IEnumerable<object>;
+        }
+
+        private static ChromeDriver ToChromeDriver(this IWebDriver driver)
+        {
+            try
+            {
+                return (ChromeDriver)driver;
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
+        private static InternetExplorerDriver ToIEDriver(this IWebDriver driver)
+        {
+            try
+            {
+                return (InternetExplorerDriver)driver;
+            }
+            catch
+            {
+                return null;
+            }
         }
     }
 }
