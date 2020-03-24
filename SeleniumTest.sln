@@ -1,0 +1,26 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.29613.14
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SeleniumTest", "SeleniumTest\SeleniumTest.csproj", "{0B5BDA68-6598-4F4A-A9A4-3CAC24AEB9C1}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{0B5BDA68-6598-4F4A-A9A4-3CAC24AEB9C1}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{0B5BDA68-6598-4F4A-A9A4-3CAC24AEB9C1}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{0B5BDA68-6598-4F4A-A9A4-3CAC24AEB9C1}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{0B5BDA68-6598-4F4A-A9A4-3CAC24AEB9C1}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		EnterpriseLibraryConfigurationToolBinariesPathV6 = packages\EnterpriseLibrary.Common.6.0.1304.0\lib\NET45
+		SolutionGuid = {8937A811-87CF-470B-B008-06FB4C0387E5}
+	EndGlobalSection
+EndGlobal
