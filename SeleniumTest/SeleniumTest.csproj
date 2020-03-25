@@ -45,9 +45,6 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="HttpHelper">
-      <HintPath>..\packages\HttpHelper.2.4.0\lib\net40\HttpHelper.dll</HintPath>
-    </Reference>
     <Reference Include="JZLibraries_Bank">
       <HintPath>..\packages\JZLibraries_Bank.1.4.31\lib\net45\JZLibraries_Bank.dll</HintPath>
     </Reference>

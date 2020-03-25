@@ -9,6 +9,9 @@ namespace BankAPI.Model
     {
         public int MaxLoop { get; set; }
 
+        /// <summary>
+        /// Time of thread sleep in second
+        /// </summary>
         public int SleepInterval { get; set; }
 
         public Func<bool> ActionTask { get; }

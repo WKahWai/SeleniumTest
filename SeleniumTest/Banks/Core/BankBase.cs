@@ -1,18 +1,13 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Web;
 using SeleniumTest.Models;
-using CsharpHttpHelper;
 using NLog;
 using OpenQA.Selenium;
-using OpenQA.Selenium.Chrome;
-using OpenQA.Selenium.IE;
 using SeleniumTest.SeleniumHelpers;
 using BankAPI.Exceptions;
 using BankAPI.Model;
 using System.Threading;
 using System.Configuration;
+using System.Net.Http;
 
 namespace SeleniumTest.Banks.Core
 {
@@ -34,22 +29,26 @@ namespace SeleniumTest.Banks.Core
         protected TransferParam param;
         //protected readonly bool HaveMultipleAccount;
         private readonly DriverToUse driverType;
-        protected HttpHelper http;
-        protected HttpItem item;
-        protected HttpResult result;
-
+        protected HttpClient http;
+        protected HttpClientHandler defaultHandler;
         public BankBase(TransferParam param, DriverToUse driverType = DriverToUse.HTTP)
         {
             this.param = param;
             this.driverType = driverType;
-            http = new HttpHelper();
-            item = new HttpItem();
+            defaultHandler = new HttpClientHandler
+            {
+                AllowAutoRedirect = true,
+                UseProxy = false,
+                UseCookies = true,
+            };
+            http = new HttpClient(defaultHandler);
+            http.Timeout = TimeSpan.FromMinutes(5);
             logger.Info($"Received account info : {param.ToJson()}");
         }
 
         protected virtual void Validation()
         {
-
+            //todo
         }
 
         public TransactionResult Start()

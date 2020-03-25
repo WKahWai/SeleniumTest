@@ -46,7 +46,7 @@ namespace SeleniumTest.SeleniumHelpers
             return result as IEnumerable<object>;
         }
 
-        private static ChromeDriver ToChromeDriver(this IWebDriver driver)
+        public static ChromeDriver ToChromeDriver(this IWebDriver driver)
         {
             try
             {
@@ -58,7 +58,7 @@ namespace SeleniumTest.SeleniumHelpers
             }
         }
 
-        private static InternetExplorerDriver ToIEDriver(this IWebDriver driver)
+        public static InternetExplorerDriver ToIEDriver(this IWebDriver driver)
         {
             try
             {
