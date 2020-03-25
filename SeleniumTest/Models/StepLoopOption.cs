@@ -14,16 +14,16 @@ namespace BankAPI.Model
         /// </summary>
         public int SleepInterval { get; set; }
 
-        public Func<bool> ActionTask { get; }
+        public Func<Action, bool> ActionTask { get; }
 
-        public StepLoopOption(Func<bool> ActionTask)
+        public StepLoopOption(Func<Action, bool> ActionTask)
         {
             this.ActionTask = ActionTask;
             MaxLoop = 10;
             SleepInterval = 1 * 1000;
         }
 
-        public static StepLoopOption DefaultOption = new StepLoopOption(() => true);
+        public static StepLoopOption DefaultOption = new StepLoopOption((i) => true);
     }
 
     public class StepLoopResult

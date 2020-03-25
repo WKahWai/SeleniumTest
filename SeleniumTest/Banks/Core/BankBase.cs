@@ -114,11 +114,10 @@ namespace SeleniumTest.Banks.Core
             {
                 try
                 {
-                    if (option.ActionTask())
+                    if (option.ActionTask(() => Thread.Sleep(option.SleepInterval)))
                     {
                         return StepLoopResult.Complete();
                     }
-                    Thread.Sleep(option.SleepInterval);
                 }
                 catch (TransferProcessException ex)
                 {

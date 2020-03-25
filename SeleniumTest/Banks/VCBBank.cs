@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Web;
 using BankAPI.Model;
 using OpenQA.Selenium;
@@ -24,10 +25,11 @@ namespace SeleniumTest.Banks
 
         protected override void Login(IWebDriver driver)
         {
-            var condition = StepLooping(new StepLoopOption(() =>
+            var condition = StepLooping(new StepLoopOption((sleep) =>
             {
                 driver.Url = "https://www.vietcombank.com.vn/IBanking2020/55c3c0a782b739e063efa9d5985e2ab4/Account/Login";
                 driver.Navigate();
+                sleep();
                 return driver.PageSource.ToUpper().Contains("Đổi tên đăng nhập") || driver.PageSource.ToUpper().Contains("Invest like an expert with Vietnam’s leading fund management company");
             })
             {
