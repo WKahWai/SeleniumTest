@@ -6,11 +6,13 @@ using System.Net.Http;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Web;
+using BankAPI.Exceptions;
 using BankAPI.Model;
 using JZLibraries_Bank.DeCode;
 using OpenQA.Selenium;
 using SeleniumTest.Banks.Core;
 using SeleniumTest.Models;
+using OpenQA.Selenium.Support.UI;
 using SeleniumTest.SeleniumHelpers;
 
 namespace SeleniumTest.Banks
@@ -22,12 +24,12 @@ namespace SeleniumTest.Banks
 
         }
 
-        protected override void CheckTransferStatus(IWebDriver driver)
+        protected override void CheckTransferStatus()
         {
             throw new NotImplementedException();
         }
 
-        protected override void Login(IWebDriver driver)
+        protected override void Login()
         {
             var condition = StepLooping(new StepLoopOption((sleep) =>
             {
@@ -41,7 +43,7 @@ namespace SeleniumTest.Banks
                 SleepInterval = 3
             });
             if (condition.HasError || !condition.IsComplete) throw new Exception("Timeout of getting login page");
-            SwitchToEnglish(driver);
+            SwitchToEnglish();
             condition = StepLooping(new StepLoopOption((sleep) =>
             {
                 try
@@ -52,7 +54,7 @@ namespace SeleniumTest.Banks
                     var password = driver.FindElement(By.Name("pass"));
                     password.Clear();
                     password.SendKeys(param.Password);
-                    var code = GetCode(driver.FindElement(By.Id("captchaImage")).GetAttribute("src"), driver.Manage().Cookies);
+                    var code = GetCode(driver.FindElement(By.Id("captchaImage")).GetAttribute("src"), driver.GetCookies());
                     var cap = driver.FindElement(By.Id("txtcapcha"));
                     cap.Clear();
                     cap.SendKeys(code);
@@ -93,21 +95,8 @@ namespace SeleniumTest.Banks
             if (condition.HasError && !condition.IsComplete) throw new Exception(condition.Message);
         }
 
-        private string GetCode(string url, ICookieJar cookies)
+        private string GetCode(string url, CookieContainer cookie)
         {
-            CookieContainer cookie = new CookieContainer();
-            foreach (var c in cookies.AllCookies)
-            {
-                cookie.Add(new System.Net.Cookie
-                {
-                    Path = c.Path,
-                    Domain = c.Domain,
-                    Value = c.Value,
-                    HttpOnly = c.IsHttpOnly,
-                    Name = c.Name,
-                    Secure = c.Secure
-                });
-            }
             var handler = new HttpClientHandler()
             {
                 AllowAutoRedirect = true,
@@ -127,13 +116,13 @@ namespace SeleniumTest.Banks
             return code;
         }
 
-        private void SwitchToEnglish(IWebDriver driver)
+        private void SwitchToEnglish()
         {
             string type = (string)driver.ToChromeDriver().ExecuteScript("return $('#linkLanguage').attr('language');");
             if (type.ToUpper() == "EN") driver.ToChromeDriver().ExecuteScript("$('#linkLanguage').click();");
         }
 
-        protected override void Logout(IWebDriver driver)
+        protected override void Logout()
         {
             try
             {
@@ -147,20 +136,68 @@ namespace SeleniumTest.Banks
             }
         }
 
-        protected override void OTP(IWebDriver driver)
+        protected override void OTP()
         {
             throw new NotImplementedException();
         }
 
-        protected override void RenewOTP(IWebDriver driver)
+        protected override void RenewOTP()
         {
             throw new NotImplementedException();
         }
 
-        protected override void Transfer(IWebDriver driver)
+        protected override void Transfer()
         {
-            throw new NotImplementedException();
+            StepLoopResult result = null;
+            if (param.IsSameBank)
+            {
+                result = StepLooping(new StepLoopOption((sleep) =>
+                {
+                    driver.FindElement(By.LinkText("Transfer within Vietcombank")).Click();
+                    driver.ToChromeDriver().ExecuteScript("$('#HinhThucChuyenTien').val(1)");
+                    SelectUserAccount();
+                    var account = driver.FindElement(By.Id("SoTaiKhoanNguoiHuong"));
+                    account.Clear();
+                    account.SendKeys(param.RecipientAccount);
+                    var amount = driver.FindElement(By.Id("SoTien"));
+                    amount.Clear();
+                    sleep();
+                    if (string.IsNullOrEmpty(driver.FindElement(By.Id("TenNguoiHuongText")).Text)) throw new TransferProcessException("Invalid recipient account");
+                    amount.SendKeys(param.Amount.ToString());
+                    var remark = driver.FindElement(By.Id("NoiDungThanhToan"));
+                    remark.Clear();
+                    remark.SendKeys(param.Remark);
+                    driver.FindElement(By.Id("btnxacnhan")).Click();
+                    return true; //to change
+                })
+                {
+                    MaxLoop = 3,
+                    SleepInterval = 1
+                });
+
+            }
+            else
+            {
+
+            }
         }
 
+        private void SelectUserAccount()
+        {
+            var account = driver.FindElement(By.Id("TaiKhoanTrichNo"));
+            var select = new SelectElement(account);
+            if (select.AllSelectedOptions.Count(c => c.Text == param.AccountNo) > 0)
+            {
+                select.SelectByText(param.AccountNo);
+                Thread.Sleep(2000);
+                var balanceTxt = (string)driver.ToChromeDriver().ExecuteScript("return $('#LB_SoDu').text().replace('VND','').replace('','').trim(' ')");
+                double balance = double.Parse(balanceTxt);
+                if ((balance - param.Amount) < 0) throw new TransferProcessException("Insufficient amount");
+            }
+            else
+            {
+                throw new TransferProcessException("Your account is not match in the bank account, please make sure your account number is correct and valid");
+            }
+        }
     }
 }

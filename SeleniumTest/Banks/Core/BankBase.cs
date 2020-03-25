@@ -13,6 +13,17 @@ namespace SeleniumTest.Banks.Core
 {
     public abstract class BankBase : IDisposable
     {
+        protected Logger logger = LogManager.GetCurrentClassLogger();
+        protected TransferParam param;
+        //protected readonly bool HaveMultipleAccount;
+        private readonly DriverToUse driverType;
+        protected IWebDriver driver;
+        protected HttpClient http;
+        protected HttpClientHandler defaultHandler;
+        private bool disposeStatus = false;
+
+        public bool isDisposed() => disposeStatus;
+
         public static BankBase GetBank(TransferParam param)
         {
             string assembily = ConfigurationManager.AppSettings["BankSurname"];
@@ -20,19 +31,29 @@ namespace SeleniumTest.Banks.Core
 
         }
 
-        public virtual void Dispose()
+        public void Dispose()
         {
+            if (driver != null)
+            {
+                Logout();
+                driver.Dispose();
+                driver.Quit();
+                driver = null;
+            }
+            if (http != null)
+            {
+                http.CancelPendingRequests();
+                http.Dispose();
+                http = null;
+            }
+            defaultHandler = null;
             GC.SuppressFinalize(this);
+            disposeStatus = true;
         }
 
-        protected Logger logger = LogManager.GetCurrentClassLogger();
-        protected TransferParam param;
-        //protected readonly bool HaveMultipleAccount;
-        private readonly DriverToUse driverType;
-        protected HttpClient http;
-        protected HttpClientHandler defaultHandler;
         public BankBase(TransferParam param, DriverToUse driverType = DriverToUse.HTTP)
         {
+            driver = new DriverFactory().Create(driverType);
             this.param = param;
             this.driverType = driverType;
             defaultHandler = new HttpClientHandler
@@ -55,58 +76,52 @@ namespace SeleniumTest.Banks.Core
         {
             var watch = System.Diagnostics.Stopwatch.StartNew();
             TransactionResult tranResult = null;
-            using (var driver = new DriverFactory().Create(driverType))
-            {
-                logger.Info("Transaction process being complete via chorme driver");
-                tranResult = BeginStep(driver);
-                driver.Quit();
-                driver.Dispose();
-                watch.Stop();
-                var elapsedMs = watch.ElapsedMilliseconds;
-                logger.Info($"Transfer time taken for account - {param.AccountNo} is {elapsedMs} ms");
-                return tranResult;
-            }
+            logger.Info("Transaction process being complete via chorme driver");
+            tranResult = BeginStep();
+            watch.Stop();
+            var elapsedMs = watch.ElapsedMilliseconds;
+            logger.Info($"Transfer time taken for account - {param.AccountNo} is {elapsedMs} ms");
+            return tranResult;
         }
 
-        private TransactionResult BeginStep(IWebDriver driver)
+        private TransactionResult BeginStep()
         {
             try
             {
                 logger.Info("Login begin");
-                Login(driver);
+                Login();
                 logger.Info("Login OK");
                 logger.Info("Entering bank transfer process");
-                TransferProcess(driver);
+                TransferProcess();
                 logger.Info($"Bank transfer process ended. Transfer Status - {param.TransferOK}");
-                Logout(driver);
+                Logout();
                 logger.Info($"Bank is logout");
                 return TransactionResult.Success($"Transaction process complete", param);
             }
             catch (TransferProcessException ex)
             {
-                Logout(driver);
                 return TransactionResult.Failed(ex.Message, 1);
             }
             catch (Exception ex)
             {
-                Logout(driver);
+                if (disposeStatus) logger.Info("Object have been terminated");
                 return TransactionResult.Failed($"转账中发生未处理到的错误", 500);
             }
         }
 
-        private void TransferProcess(IWebDriver driver)
+        private void TransferProcess()
         {
-            Transfer(driver);
-            OTP(driver);
-            CheckTransferStatus(driver);
+            Transfer();
+            OTP();
+            CheckTransferStatus();
         }
 
-        protected abstract void Login(IWebDriver driver);
-        protected abstract void Logout(IWebDriver driver);
-        protected abstract void Transfer(IWebDriver driver);
-        protected abstract void RenewOTP(IWebDriver driver);
-        protected abstract void OTP(IWebDriver driver);
-        protected abstract void CheckTransferStatus(IWebDriver driver);
+        protected abstract void Login();
+        protected abstract void Logout();
+        protected abstract void Transfer();
+        protected abstract void RenewOTP();
+        protected abstract void OTP();
+        protected abstract void CheckTransferStatus();
 
         protected StepLoopResult StepLooping(StepLoopOption option)
         {

@@ -4,6 +4,7 @@ using OpenQA.Selenium.IE;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net;
 using System.Threading;
 using System.Web;
 
@@ -68,6 +69,24 @@ namespace SeleniumTest.SeleniumHelpers
             {
                 return null;
             }
+        }
+
+        public static CookieContainer GetCookies(this IWebDriver driver)
+        {
+            CookieContainer cookie = new CookieContainer();
+            foreach (var c in driver.Manage().Cookies.AllCookies)
+            {
+                cookie.Add(new System.Net.Cookie
+                {
+                    Path = c.Path,
+                    Domain = c.Domain,
+                    Value = c.Value,
+                    HttpOnly = c.IsHttpOnly,
+                    Name = c.Name,
+                    Secure = c.Secure
+                });
+            }
+            return cookie;
         }
     }
 }

@@ -11,6 +11,7 @@ using System.Threading;
 using SeleniumTest.Models;
 using System.Linq;
 using SeleniumTest.Banks.Core;
+using System.Threading.Tasks;
 
 namespace SeleniumTest.Controllers
 {
@@ -26,7 +27,7 @@ namespace SeleniumTest.Controllers
         {
             List<string> list = Enum.GetValues(typeof(Bank)).Cast<Bank>().Select(c => c.ToString()).ToList();
             //return JsonResponse.success(list, "Request successful");
-            return JsonResponse.success(new TransferParam(),"");
+            return JsonResponse.success(new TransferParam(), "");
         }
 
         // GET api/values/5
