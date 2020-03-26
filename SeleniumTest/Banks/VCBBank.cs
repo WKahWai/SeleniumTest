@@ -138,7 +138,23 @@ namespace SeleniumTest.Banks
 
         protected override void OTP()
         {
-            throw new NotImplementedException();
+            var result = StepLooping(new StepLoopOption((sleep) =>
+            {
+                var OTPType = driver.FindElement(By.Id("otpValidType"));
+                var select = new SelectElement(OTPType);
+                select.SelectByText("SMS");
+                var code = GetCode(driver.FindElement(By.Id("captchaImage")).GetAttribute("src"), driver.GetCookies());
+                var captcha = driver.FindElement(By.Id("CaptchaText"));
+                captcha.Clear();
+                captcha.SendKeys(code);
+                driver.FindElement(By.Id("btnSubmitStep2")).Click();
+                sleep();
+                return true;
+            })
+            {
+                MaxLoop = 2,
+                SleepInterval = 2
+            });
         }
 
         protected override void RenewOTP()
@@ -161,18 +177,19 @@ namespace SeleniumTest.Banks
                     account.SendKeys(param.RecipientAccount);
                     var amount = driver.FindElement(By.Id("SoTien"));
                     amount.Clear();
-                    sleep();
-                    if (string.IsNullOrEmpty(driver.FindElement(By.Id("TenNguoiHuongText")).Text)) throw new TransferProcessException("Invalid recipient account");
                     amount.SendKeys(param.Amount.ToString());
+                    sleep();
+                    if (string.IsNullOrEmpty((string)driver.ToChromeDriver().ExecuteScript("return $('#TenNguoiHuongText').val()"))) throw new TransferProcessException("Invalid recipient account");
                     var remark = driver.FindElement(By.Id("NoiDungThanhToan"));
                     remark.Clear();
                     remark.SendKeys(param.Remark);
                     driver.FindElement(By.Id("btnxacnhan")).Click();
-                    return true; //to change
+                    sleep();
+                    return driver.FindElement(By.Id("LB_TaiKhoanTrichNo")).Text == param.AccountNo;
                 })
                 {
                     MaxLoop = 3,
-                    SleepInterval = 1
+                    SleepInterval = 4
                 });
 
             }
@@ -180,6 +197,7 @@ namespace SeleniumTest.Banks
             {
 
             }
+            if (result.HasError || !result.IsComplete) throw new Exception("Transfer Step 1 have error. " + result.Message);
         }
 
         private void SelectUserAccount()
