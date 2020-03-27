@@ -21,13 +21,13 @@ namespace SeleniumTest.Banks.Core
         protected HttpClient http;
         protected HttpClientHandler defaultHandler;
         private bool disposeStatus = false;
-
+        protected SocketItem socket;
         public bool isDisposed() => disposeStatus;
 
-        public static BankBase GetBank(TransferParam param)
+        public static BankBase GetBank(SocketItem item)
         {
             string assembily = ConfigurationManager.AppSettings["BankSurname"];
-            return (BankBase)Activator.CreateInstance(Type.GetType($"{assembily}.{param.GetBankName().ToString()}"), new object[] { param });
+            return (BankBase)Activator.CreateInstance(Type.GetType($"{assembily}.{item.param.GetBankName().ToString()}"), new object[] { item });
 
         }
 
@@ -46,15 +46,17 @@ namespace SeleniumTest.Banks.Core
                 http.Dispose();
                 http = null;
             }
+            socket = null;
             defaultHandler = null;
             GC.SuppressFinalize(this);
             disposeStatus = true;
         }
 
-        public BankBase(TransferParam param, DriverToUse driverType = DriverToUse.HTTP)
+        public BankBase(SocketItem item, DriverToUse driverType = DriverToUse.HTTP)
         {
             driver = new DriverFactory().Create(driverType);
-            this.param = param;
+            socket = item;
+            param = item.param;
             this.driverType = driverType;
             defaultHandler = new HttpClientHandler
             {

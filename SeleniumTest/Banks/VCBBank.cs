@@ -19,7 +19,7 @@ namespace SeleniumTest.Banks
 {
     public class VCBBank : BankBase
     {
-        public VCBBank(TransferParam param) : base(param, DriverToUse.Chrome)
+        public VCBBank(SocketItem item) : base(item, DriverToUse.Chrome)
         {
 
         }

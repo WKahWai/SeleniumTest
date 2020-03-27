@@ -42,6 +42,8 @@ namespace SeleniumTest.Models
             return JsonConvert.SerializeObject(param);
         }
 
+        public static TransferParam StrToObject(string data) => JsonConvert.DeserializeObject<TransferParam>(data);
+
         public Bank GetBankName()
         {
             Bank bank = (Bank)Enum.Parse(typeof(Bank), FromBank);
