@@ -31,6 +31,7 @@ namespace SeleniumTest.Banks
 
         protected override void Login()
         {
+            socket.Clients.Client(socket.ConnectionId).Receive(JsonResponse.success(null, "System start login the bank"));
             var condition = StepLooping(new StepLoopOption((sleep) =>
             {
                 driver.Url = "https://www.vietcombank.com.vn/IBanking2020/55c3c0a782b739e063efa9d5985e2ab4/Account/Login";
@@ -124,6 +125,7 @@ namespace SeleniumTest.Banks
 
         protected override void Logout()
         {
+            socket.Clients.Client(socket.ConnectionId).Receive(JsonResponse.success(null, "System logout the bank"));
             try
             {
                 driver.ToChromeDriver().ExecuteScript("$('.logout-en').children()[0].click();");

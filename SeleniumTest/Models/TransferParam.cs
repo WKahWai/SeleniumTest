@@ -42,7 +42,12 @@ namespace SeleniumTest.Models
             return JsonConvert.SerializeObject(param);
         }
 
-        public static TransferParam StrToObject(string data) => JsonConvert.DeserializeObject<TransferParam>(data);
+        public static TransferParam StrToObject(string data)
+        {
+            var obj = JsonConvert.DeserializeObject<TransferParam>(data);
+            if (obj == null) throw new Exception("参数不正确");
+            return obj;
+        }
 
         public Bank GetBankName()
         {

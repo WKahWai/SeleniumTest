@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Threading.Tasks;
+using Microsoft.AspNet.SignalR;
 using Microsoft.Owin;
 using Owin;
 using SeleniumTest.Socket;
@@ -12,7 +13,11 @@ namespace SeleniumTest
     {
         public void Configuration(IAppBuilder app)
         {
-            app.MapAzureSignalR(typeof(TransferHub).FullName);
+            app.MapSignalR(new HubConfiguration
+            {
+                EnableJSONP = true,
+                EnableJavaScriptProxies = true
+            });
         }
     }
 }
