@@ -45,7 +45,7 @@ namespace BankAPI.Model
             return new StepLoopResult
             {
                 IsComplete = false,
-                HasError = true,
+                HasError = false,
                 Message = "执行中的任务超时，系统强制终止任务"
             };
         }

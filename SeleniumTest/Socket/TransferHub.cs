@@ -97,5 +97,17 @@ namespace SeleniumTest.Socket
                 Clients.Client(Context.ConnectionId).Receive(JsonResponse.failed("开始初始化列队时出现错误"));
             }
         }
+
+        public void WriteIn(string data)
+        {
+            lock (ProcessingList)
+            {
+                var target = ProcessingList.FirstOrDefault(c => c.ConnectionId == Context.ConnectionId);
+                if (target != null)
+                {
+                    target.Bank.GetClientResponse = () => data;
+                }
+            }
+        }
     }
 }

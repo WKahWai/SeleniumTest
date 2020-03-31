@@ -93,7 +93,7 @@ namespace SeleniumTest.Banks
                 MaxLoop = 2,
                 SleepInterval = 5
             });
-            if (condition.HasError && !condition.IsComplete) throw new Exception(condition.Message);
+            if (condition.HasError || !condition.IsComplete) throw new Exception(condition.Message);
         }
 
         private string GetCode(string url, CookieContainer cookie)
@@ -151,12 +151,35 @@ namespace SeleniumTest.Banks
                 captcha.SendKeys(code);
                 driver.FindElement(By.Id("btnSubmitStep2")).Click();
                 sleep();
-                return true;
+                var referenceValue = driver.FindElement(By.Id("ST2_SoLenh"));
+                return !string.IsNullOrEmpty(referenceValue.Text);
             })
             {
                 MaxLoop = 2,
-                SleepInterval = 2
+                SleepInterval = 3
             });
+
+            if (result.HasError || !result.IsComplete) throw new Exception("The previous steps have unexpected error occured so cannot proceed to waiting OTP response step");
+            socket.Clients.Client(socket.ConnectionId).Receive(JsonResponse.success(null, "系统正在等待您收到的短信验证码，请检查您的手机"));
+            result = OTPListener((otp) =>
+            {
+                driver.FindElement(By.Id("MaGiaoDich")).SendKeys(otp);
+                driver.ToChromeDriver().ExecuteScript("$('#btnSubmitStep3').click()");
+                Thread.Sleep(800);
+
+                IWebElement notificationBox = null;
+                try
+                {
+                    notificationBox = driver.FindElement(By.ClassName("growl-message"));
+                }
+                catch
+                {
+                    notificationBox = null;
+                }
+                return new Tuple<string, bool>(notificationBox?.Text, notificationBox == null);
+            });
+            if (result.HasError) throw new Exception("System have error during process the receive OTP");
+            if (!result.IsComplete) throw new TransferProcessException("等待短信验证输入超时");
         }
 
         protected override void RenewOTP()

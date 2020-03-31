@@ -13,6 +13,7 @@ namespace SeleniumTest.Banks.Core
 {
     public abstract class BankBase : IDisposable
     {
+        public Func<string> GetClientResponse = null;
         protected Logger logger = LogManager.GetCurrentClassLogger();
         protected TransferParam param;
         //protected readonly bool HaveMultipleAccount;
@@ -46,6 +47,7 @@ namespace SeleniumTest.Banks.Core
                 http.Dispose();
                 http = null;
             }
+            GetClientResponse = null;
             socket = null;
             defaultHandler = null;
             GC.SuppressFinalize(this);
@@ -146,6 +148,46 @@ namespace SeleniumTest.Banks.Core
                 }
             }
             return StepLoopResult.SetTimeout();
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="condition">This is the function for checking the GUI have correct OTP or not</param>
+        /// <param name="otpExpiredDuration">This value is use to control the loop times and it is in minute unit</param>
+        /// <returns></returns>
+        protected StepLoopResult OTPListener(Func<string, Tuple<string, bool>> condition, int otpExpiredDuration = 1)
+        {
+            var stepLoopResult = StepLooping(new StepLoopOption((sleep) =>
+            {
+                sleep();
+                if (GetClientResponse != null)
+                {
+                    string _otp = GetClientResponse();
+                    GetClientResponse = null;
+                    if (string.IsNullOrEmpty(_otp)) return false;
+                    if (_otp.Length < 6 || _otp.Length > 6)
+                    {
+                        socket.Clients.Client(socket.ConnectionId).Receive(JsonResponse.success(null, "短信验证长度不符合标准，请确保输入正确的验证码"));
+                        return false;
+                    }
+                    else
+                    {
+                        Tuple<string, bool> result = condition(_otp);
+                        if (result.Item2)
+                        {
+                            return true;
+                        }
+                        else throw new TransferProcessException(result.Item1 ?? "验证码不正确，无法转账。");
+                    }
+                }
+                return false;
+            })
+            {
+                MaxLoop = otpExpiredDuration * 60 / 3,
+                SleepInterval = 3
+            });
+            return stepLoopResult;
         }
     }
 }

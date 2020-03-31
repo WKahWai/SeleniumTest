@@ -12,13 +12,4 @@ namespace BankAPI.Exceptions
 
         }
     }
-
-
-    public class TransferProcessInternalException : Exception
-    {
-        public TransferProcessInternalException(string message) : base("内部转账过程有误： " + message)
-        {
-
-        }
-    }
 }
