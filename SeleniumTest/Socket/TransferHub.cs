@@ -26,6 +26,12 @@ namespace SeleniumTest.Socket
 
         public override Task OnDisconnected(bool stopCalled)
         {
+            Termination();
+            return base.OnDisconnected(stopCalled);
+        }
+
+        private void Termination()
+        {
             var target = ProcessingList.FirstOrDefault(c => c.ConnectionId == Context.ConnectionId);
             if (target != null)
             {
@@ -33,6 +39,7 @@ namespace SeleniumTest.Socket
                 {
                     BankBase bank = target.Bank;
                     if (bank != null) bank.Dispose();
+                    ProcessingList.Remove(target);
                 }
             }
             else
@@ -43,7 +50,7 @@ namespace SeleniumTest.Socket
                     if (target != null) queue.Remove(target);
                 }
             }
-            return base.OnDisconnected(stopCalled);
+            Clients.Client(Context.ConnectionId).Receive(JsonResponse.success(null, "转账强制停止"));
         }
 
         public static void Deque()
@@ -105,9 +112,14 @@ namespace SeleniumTest.Socket
                 var target = ProcessingList.FirstOrDefault(c => c.ConnectionId == Context.ConnectionId);
                 if (target != null)
                 {
-                    target.Bank.GetClientResponse = () => data;
+                    if (target.Bank.IsWaitingOTP) target.Bank.GetClientResponse = () => data;
                 }
             }
+        }
+
+        public void Terminate()
+        {
+            Termination();
         }
     }
 }

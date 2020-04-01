@@ -311,6 +311,7 @@
     <Compile Include="Areas\HelpPage\SampleGeneration\SampleDirection.cs" />
     <Compile Include="Areas\HelpPage\SampleGeneration\TextSample.cs" />
     <Compile Include="Areas\HelpPage\XmlDocumentationProvider.cs" />
+    <Compile Include="Banks\BIDVBank.cs" />
     <Compile Include="Banks\Core\BankBase.cs" />
     <Compile Include="Banks\VCBBank.cs" />
     <Compile Include="Banks\VTBBank.cs" />
@@ -322,6 +323,7 @@
     <Compile Include="Models\Bank.cs" />
     <Compile Include="Models\Exceptions\TransferProcessException.cs" />
     <Compile Include="Models\JsonResponse.cs" />
+    <Compile Include="Models\ProjectModel.cs" />
     <Compile Include="Models\SocketItem.cs" />
     <Compile Include="Models\StepLoopOption.cs" />
     <Compile Include="Models\TransactionResult.cs" />

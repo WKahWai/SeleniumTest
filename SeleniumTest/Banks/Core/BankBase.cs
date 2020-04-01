@@ -23,6 +23,7 @@ namespace SeleniumTest.Banks.Core
         protected HttpClientHandler defaultHandler;
         private bool disposeStatus = false;
         protected SocketItem socket;
+        public bool IsWaitingOTP = false;
         public bool isDisposed() => disposeStatus;
 
         public static BankBase GetBank(SocketItem item)
@@ -104,11 +105,21 @@ namespace SeleniumTest.Banks.Core
             }
             catch (TransferProcessException ex)
             {
+                logger.Info($"[{param.AccountNo}] - Transfer Stop due to - {ex.Message}");
                 return TransactionResult.Failed(ex.Message, 1);
             }
             catch (Exception ex)
             {
-                if (disposeStatus) logger.Info("Object have been terminated");
+                if (disposeStatus)
+                {
+                    logger.Info("Object have been terminated");
+                    return TransactionResult.Success($"转账以终止", param);
+                }
+                else
+                {
+                    logger.Info($"[{param.AccountNo}] - Error occur");
+                    logger.Error($"[{param.AccountNo}] - {ex.Message}");
+                }
                 return TransactionResult.Failed($"转账中发生未处理到的错误", 500);
             }
         }
@@ -187,6 +198,7 @@ namespace SeleniumTest.Banks.Core
                 MaxLoop = otpExpiredDuration * 60 / 3,
                 SleepInterval = 3
             });
+            IsWaitingOTP = false;
             return stepLoopResult;
         }
     }

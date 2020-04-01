@@ -108,10 +108,10 @@ namespace SeleniumTest.Banks
             var result = http.GetAsync(url).Result;
             DeCode decode = new DeCode();
             string code = decode.GetCode(5, JZLibraries_Bank.DeCode.CaptchaType.LetterNumber, result.Content.ReadAsByteArrayAsync().Result);
-            logger.Info($"[{this.GetType().Name}][LoginBank]验证码 : {code}");
+            logger.Info($"[{this.GetType().Name}]验证码 : {code}");
             if (code.Length != 5)
             {
-                logger.Info($"[{this.GetType().Name}][LoginBank]登录失败.验证码识别失败[{decode.GetCodeName(decode.Dama.f_codeuse)}]-{code}");
+                logger.Info($"[{this.GetType().Name}]登录失败.验证码识别失败[{decode.GetCodeName(decode.Dama.f_codeuse)}]-{code}");
                 throw new Exception($"登录失败.验证码识别失败[{decode.GetCodeName(decode.Dama.f_codeuse)}]-{code}");
             }
             return code;
@@ -140,46 +140,50 @@ namespace SeleniumTest.Banks
 
         protected override void OTP()
         {
-            var result = StepLooping(new StepLoopOption((sleep) =>
+            if (param.IsSameBank)
             {
-                var OTPType = driver.FindElement(By.Id("otpValidType"));
-                var select = new SelectElement(OTPType);
-                select.SelectByText("SMS");
-                var code = GetCode(driver.FindElement(By.Id("captchaImage")).GetAttribute("src"), driver.GetCookies());
-                var captcha = driver.FindElement(By.Id("CaptchaText"));
-                captcha.Clear();
-                captcha.SendKeys(code);
-                driver.FindElement(By.Id("btnSubmitStep2")).Click();
-                sleep();
-                var referenceValue = driver.FindElement(By.Id("ST2_SoLenh"));
-                return !string.IsNullOrEmpty(referenceValue.Text);
-            })
-            {
-                MaxLoop = 2,
-                SleepInterval = 3
-            });
-
-            if (result.HasError || !result.IsComplete) throw new Exception("The previous steps have unexpected error occured so cannot proceed to waiting OTP response step");
-            socket.Clients.Client(socket.ConnectionId).Receive(JsonResponse.success(null, "系统正在等待您收到的短信验证码，请检查您的手机"));
-            result = OTPListener((otp) =>
-            {
-                driver.FindElement(By.Id("MaGiaoDich")).SendKeys(otp);
-                driver.ToChromeDriver().ExecuteScript("$('#btnSubmitStep3').click()");
-                Thread.Sleep(800);
-
-                IWebElement notificationBox = null;
-                try
+                var result = StepLooping(new StepLoopOption((sleep) =>
                 {
-                    notificationBox = driver.FindElement(By.ClassName("growl-message"));
-                }
-                catch
+                    var OTPType = driver.FindElement(By.Id("otpValidType"));
+                    var select = new SelectElement(OTPType);
+                    select.SelectByText("SMS");
+                    var code = GetCode(driver.FindElement(By.Id("captchaImage")).GetAttribute("src"), driver.GetCookies());
+                    var captcha = driver.FindElement(By.Id("CaptchaText"));
+                    captcha.Clear();
+                    captcha.SendKeys(code);
+                    driver.FindElement(By.Id("btnSubmitStep2")).Click();
+                    sleep();
+                    var referenceValue = driver.FindElement(By.Id("ST2_SoLenh"));
+                    return !string.IsNullOrEmpty(referenceValue.Text);
+                })
                 {
-                    notificationBox = null;
-                }
-                return new Tuple<string, bool>(notificationBox?.Text, notificationBox == null);
-            });
-            if (result.HasError) throw new Exception("System have error during process the receive OTP");
-            if (!result.IsComplete) throw new TransferProcessException("等待短信验证输入超时");
+                    MaxLoop = 2,
+                    SleepInterval = 3
+                });
+
+                if (result.HasError || !result.IsComplete) throw new Exception("The previous steps have unexpected error occured so cannot proceed to waiting OTP response step");
+                socket.Clients.Client(socket.ConnectionId).Receive(JsonResponse.success(null, "系统正在等待您收到的短信验证码，请检查您的手机"));
+                IsWaitingOTP = true;
+                result = OTPListener((otp) =>
+                {
+                    driver.FindElement(By.Id("MaGiaoDich")).SendKeys(otp);
+                    driver.ToChromeDriver().ExecuteScript("$('#btnSubmitStep3').click()");
+                    Thread.Sleep(800);
+
+                    IWebElement notificationBox = null;
+                    try
+                    {
+                        notificationBox = driver.FindElement(By.ClassName("growl-message"));
+                    }
+                    catch
+                    {
+                        notificationBox = null;
+                    }
+                    return new Tuple<string, bool>(notificationBox?.Text, notificationBox == null);
+                });
+                if (result.HasError) throw new Exception("System have error during process the receive OTP");
+                if (!result.IsComplete) throw new TransferProcessException("等待短信验证输入超时");
+            }
         }
 
         protected override void RenewOTP()
@@ -227,19 +231,22 @@ namespace SeleniumTest.Banks
 
         private void SelectUserAccount()
         {
-            var account = driver.FindElement(By.Id("TaiKhoanTrichNo"));
-            var select = new SelectElement(account);
-            if (select.AllSelectedOptions.Count(c => c.Text == param.AccountNo) > 0)
+            if (param.IsSameBank)
             {
-                select.SelectByText(param.AccountNo);
-                Thread.Sleep(2000);
-                var balanceTxt = (string)driver.ToChromeDriver().ExecuteScript("return $('#LB_SoDu').text().replace('VND','').replace('','').trim(' ')");
-                double balance = double.Parse(balanceTxt);
-                if ((balance - param.Amount) < 0) throw new TransferProcessException("Insufficient amount");
-            }
-            else
-            {
-                throw new TransferProcessException("Your account is not match in the bank account, please make sure your account number is correct and valid");
+                var account = driver.FindElement(By.Id("TaiKhoanTrichNo"));
+                var select = new SelectElement(account);
+                if (select.AllSelectedOptions.Count(c => c.Text == param.AccountNo) > 0)
+                {
+                    select.SelectByText(param.AccountNo);
+                    Thread.Sleep(2000);
+                    var balanceTxt = (string)driver.ToChromeDriver().ExecuteScript("return $('#LB_SoDu').text().replace('VND','').replace('','').trim(' ')");
+                    double balance = double.Parse(balanceTxt);
+                    if ((balance - param.Amount) < 0) throw new TransferProcessException("Insufficient amount");
+                }
+                else
+                {
+                    throw new TransferProcessException("Your account is not match in the bank account, please make sure your account number is correct and valid");
+                }
             }
         }
     }
