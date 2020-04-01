@@ -27,6 +27,7 @@ namespace SeleniumTest.Banks
 
         protected override void Login()
         {
+            socket.Clients.Client(socket.ConnectionId).Receive(JsonResponse.success(null, "System start login the bank"));
             var condition = StepLooping(new StepLoopOption((sleep) =>
             {
                 driver.Url = "https://ebanking.vietinbank.vn/rcas/portal/web/retail/bflogin";
@@ -108,9 +109,11 @@ namespace SeleniumTest.Banks
 
         protected override void Logout()
         {
+            socket.Clients.Client(socket.ConnectionId).Receive(JsonResponse.success(null, "System logout the bank"));
             try
             {
-                driver.FindElement(By.CssSelector("a[title^='Sign Out']")).Click();
+                driver.ToChromeDriver().ExecuteScript("$('a[title^=\"Sign Out\"]').click();");
+                Thread.Sleep(2000);
                 logger.Info($"Account [{param.AccountNo}] - Logout successful");
             }   
             catch (Exception ex)
@@ -120,9 +123,66 @@ namespace SeleniumTest.Banks
             }
         }
 
+
         protected override void OTP()
         {
-            throw new NotImplementedException();
+            var result = StepLooping(new StepLoopOption((sleep) =>
+            {
+                //匹配所有以下的資訊再點擊btnSubmit提交 否則取消交易 特別是在賬號名字不對的時候
+
+                IWebElement transferAccNoLabel = driver.FindElement(By.XPath("//*[contains(text(), 'Transfer')]"));
+                IWebElement transferAccNo = transferAccNoLabel.FindElement(By.XPath("./..")).FindElements(By.TagName("div"))[1];
+
+                IWebElement receiverNameLabel = driver.FindElement(By.XPath("//*[contains(text(), 'Receiver')]"));
+                IWebElement receiverName = receiverNameLabel.FindElement(By.XPath("./..")).FindElements(By.TagName("div"))[1];
+
+                IWebElement receiverAccNoLabel = driver.FindElement(By.XPath("//*[contains(text(), 'Account No')]"));
+                IWebElement receiverAccNo = receiverAccNoLabel.FindElement(By.XPath("./..")).FindElements(By.TagName("div"))[1];
+
+                // Pass進來時either處理了所有標號or接收沒有標號的數目
+                IWebElement amountLabel = driver.FindElement(By.XPath("//*[contains(text(), 'Amount')]"));
+                IWebElement amount = amountLabel.FindElement(By.XPath("./..")).FindElements(By.TagName("div"))[1];
+
+                IWebElement remarkLabel = driver.FindElement(By.XPath("//*[contains(text(), 'Content')]"));
+                IWebElement remark = remarkLabel.FindElement(By.XPath("./..")).FindElements(By.TagName("div"))[1];
+
+                driver.FindElement(By.CssSelector("input[id^='btnSubmit']")).Click();
+
+                Thread.Sleep(2000);
+
+                var referenceValue = driver.FindElement(By.Id("ST2_SoLenh"));
+                return !string.IsNullOrEmpty(referenceValue.Text);
+            })
+            {
+                MaxLoop = 2,
+                SleepInterval = 3
+            });
+
+            if (result.HasError || !result.IsComplete) throw new Exception("The previous steps have unexpected error occured so cannot proceed to waiting OTP response step");
+            socket.Clients.Client(socket.ConnectionId).Receive(JsonResponse.success(null, "系统正在等待您收到的短信验证码，请检查您的手机"));
+
+            result = OTPListener((otp) =>
+            {
+                driver.FindElement(By.CssSelector("input[id^='otp']")).SendKeys(otp);
+
+                driver.FindElement(By.CssSelector("input[id^='btnSubmit']")).Click();
+
+                if (driver.FindElement(By.CssSelector("div[class^='errmsg']")) == null)
+                {
+
+                }
+                else
+                {
+                    driver.FindElement(By.CssSelector("input[id^='btnReset']")).Click();
+                    Thread.Sleep(2000);
+                    driver.FindElement(By.CssSelector("input[id^='btnSubmit']")).Click();
+
+                }
+                return new Tuple<string, bool>(notificationBox?.Text, notificationBox == null);
+            });
+
+            if (result.HasError) throw new Exception("System have error during process the receive OTP");
+            if (!result.IsComplete) throw new TransferProcessException("等待短信验证输入超时");
         }
 
         protected override void RenewOTP()
@@ -135,17 +195,31 @@ namespace SeleniumTest.Banks
             StepLoopResult result = null;
             if (!param.IsSameBank)
             {
+                driver.FindElement(By.XPath("//*[contains(text(), 'Transfer')]")).Click();
+                driver.FindElement(By.CssSelector("a[title^='Internal Transfer']")).Click();
+
+                driver.SwitchTo().Frame(0);
+
                 result = StepLooping(new StepLoopOption((sleep) =>
                 {
-                    driver.FindElement(By.XPath("//*[contains(text(), 'Transfer')]")).Click();
-                    driver.FindElement(By.CssSelector("a[title^='Internal Transfer']")).Click();
-
-                    driver.SwitchTo().Frame(0);
-
                     var selectedAccount = "(VND) - 104868097259";
-                    SelectUserAccount(selectedAccount);
-               
-                    return true; //to change
+                    var data = SelectUserAccount(selectedAccount);
+
+                    driver.FindElement(By.CssSelector("input[id^='toAcct']")).SendKeys(param.RecipientAccount);
+                    driver.FindElement(By.CssSelector("input[id^='amt']")).SendKeys(param.Amount.ToString());
+                    driver.FindElement(By.CssSelector("textarea[id^='memo']")).SendKeys(param.Remark);
+
+                    driver.FindElement(By.CssSelector("input[id^='btnSubmit']")).Click();
+
+                    if (driver.FindElement(By.CssSelector("div[id^='serverErrorMsg']")) == null)
+                    {
+                        return true;
+                    }
+                    else
+                    {
+                        driver.FindElement(By.CssSelector("input[id^='btnReset']")).Click();
+                        return false;
+                    }
                 })
                 {
                     MaxLoop = 3,
@@ -160,29 +234,25 @@ namespace SeleniumTest.Banks
 
         }
 
-        private void SelectUserAccount(string selectedAccount)
+        private List<string> SelectUserAccount(string selectedAccount)
         {
-            IWebElement accountList = driver.FindElement(By.CssSelector("select[id^='frAcct']"));
-            SelectElement selectElement = new SelectElement(accountList);
+            List<IWebElement> accountList2 = driver.FindElements(By.XPath("//option[not(contains(text(), 'Select'))]")).ToList();
+            List<string> list = new List<string>();
 
-            for (int i = 0; i < selectElement.Options.Count; i++)
+            accountList2.ForEach((item) =>
             {
-                selectElement.SelectByIndex(i);
-                //driver.
-            }
+                driver.FindElement(By.CssSelector("select[id^='frAcct']")).Click();
 
-            if (selectElement.Options.Count(c => c.Text.Contains(param.AccountNo)) > 0)
-            {
-                selectElement.SelectByText(selectedAccount);
-                Thread.Sleep(2000);
-                var balanceTxt = (string)driver.ToChromeDriver().ExecuteScript("return $('#LB_SoDu').text().replace('VND','').replace('','').trim(' ')");
-                double balance = double.Parse(balanceTxt);
-                if ((balance - param.Amount) < 0) throw new TransferProcessException("Insufficient amount");
-            }
-            else
-            {
-                throw new TransferProcessException("Your account is not match in the bank account, please make sure your account number is correct and valid");
-            }
+                var account = item.Text;
+                driver.FindElement(By.XPath("//*[contains(text(), '"+ account +"')]")).Click();
+
+                var script = "return $(\"input[id^='currBalance']\").val()";
+                var balance = driver.ToChromeDriver().ExecuteScript(script);
+
+                list.Add(account + " - " + balance);
+            });
+
+            return list;
         }
     }
 }
