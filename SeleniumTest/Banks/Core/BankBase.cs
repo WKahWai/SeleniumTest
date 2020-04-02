@@ -30,7 +30,6 @@ namespace SeleniumTest.Banks.Core
         {
             string assembily = ConfigurationManager.AppSettings["BankSurname"];
             return (BankBase)Activator.CreateInstance(Type.GetType($"{assembily}.{item.param.GetBankName().ToString()}"), new object[] { item });
-
         }
 
         public void Dispose()
@@ -143,6 +142,7 @@ namespace SeleniumTest.Banks.Core
 
         protected StepLoopResult StepLooping(StepLoopOption option)
         {
+            int errorCount = 0;
             for (int i = 0; i < option.MaxLoop; i++)
             {
                 try
@@ -158,7 +158,11 @@ namespace SeleniumTest.Banks.Core
                 }
                 catch (Exception ex)
                 {
-                    return StepLoopResult.Error($"在回转线中发生错误 : {ex.Message}");
+                    if ((errorCount / option.MaxLoop) > 80)
+                    {
+                        return StepLoopResult.Error($"在回转线中发生错误已大于80%,系统强行中断 : {ex.Message}");
+                    }
+                    errorCount++;
                 }
             }
             return StepLoopResult.SetTimeout();

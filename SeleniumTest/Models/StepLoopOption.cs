@@ -31,7 +31,6 @@ namespace BankAPI.Model
             this.ActionTask = ActionTask;
         }
 
-        public static StepLoopOption DefaultOption = new StepLoopOption((i) => true);
     }
 
     public class StepLoopResult
