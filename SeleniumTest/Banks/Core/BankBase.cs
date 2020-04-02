@@ -35,18 +35,21 @@ namespace SeleniumTest.Banks.Core
 
         public void Dispose()
         {
-            if (driver != null)
+            if (!disposeStatus)
             {
-                Logout();
-                driver.Dispose();
-                driver.Quit();
-                driver = null;
-            }
-            if (http != null)
-            {
-                http.CancelPendingRequests();
-                http.Dispose();
-                http = null;
+                if (driver != null)
+                {
+                    Logout();
+                    driver.Dispose();
+                    driver.Quit();
+                    driver = null;
+                }
+                if (http != null)
+                {
+                    http.CancelPendingRequests();
+                    http.Dispose();
+                    http = null;
+                }
             }
             GetClientResponse = null;
             socket = null;

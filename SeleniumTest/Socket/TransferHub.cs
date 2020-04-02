@@ -16,6 +16,7 @@ namespace SeleniumTest.Socket
     {
         public static List<SocketItem> ProcessingList = new List<SocketItem>();
         public static List<SocketItem> queue = new List<SocketItem>();
+        public static List<string> EmergencySkipQueueTerminationList = new List<string>();
         public Logger logger = LogManager.GetCurrentClassLogger();
 
 
@@ -38,19 +39,32 @@ namespace SeleniumTest.Socket
                 lock (ProcessingList)
                 {
                     BankBase bank = target.Bank;
-                    if (bank != null) bank.Dispose();
-                    ProcessingList.Remove(target);
+                    if (bank != null) Task.Run(() => bank.Dispose()).ContinueWith(async (c) =>
+                    {
+                        await c;
+                        ProcessingList.Remove(target);
+                    });
                 }
+                Clients.Client(Context.ConnectionId).Receive(JsonResponse.success(null, "正在处理的转账已被强制停止"));
             }
             else
             {
-                lock (queue)
+                if (EmergencySkipQueueTerminationList.Count(c => c.Equals(Context.ConnectionId)) == 0 && queue.Count > 0)
                 {
-                    target = queue.FirstOrDefault(c => c.ConnectionId == Context.ConnectionId);
-                    if (target != null) queue.Remove(target);
+                    EmergencySkipQueueTerminationList.Add(Context.ConnectionId);
+                    lock (queue)
+                    {
+                        target = queue.FirstOrDefault(c => c.ConnectionId == Context.ConnectionId);
+                        if (target != null)
+                        {
+                            queue.Remove(target);
+                            if (target.Bank != null) Task.Run(() => target.Bank.Dispose());
+                        }
+                        EmergencySkipQueueTerminationList.Remove(Context.ConnectionId);
+                    }
+                    Clients.Client(Context.ConnectionId).Receive(JsonResponse.success(null, "转账强制停止,已从列队中移除"));
                 }
             }
-            Clients.Client(Context.ConnectionId).Receive(JsonResponse.success(null, "转账强制停止"));
         }
 
         public static void Deque()
@@ -69,11 +83,11 @@ namespace SeleniumTest.Socket
                             SocketItem item = null;
                             lock (queue)
                             {
-                                item = queue[i];
+                                try { item = queue[i]; } catch { break; }
                                 item.Bank = BankBase.GetBank(queue[i]);
+                                if (EmergencySkipQueueTerminationList.Where(c => c.Equals(item.ConnectionId)).Count() != 0) break;
                                 ProcessingList.Add(item);
                                 item.Clients.Client(item.ConnectionId).Receive(JsonResponse.success(null, "你的转账正在进行中"));
-
                             }
                             queue.Remove(queue[i]);
                             Task.Run(() => item.Bank.Start()).ContinueWith(async (task) =>
@@ -81,8 +95,11 @@ namespace SeleniumTest.Socket
                                 TransactionResult result = await task;
                                 item.Clients.Client(item.ConnectionId).Receive(result.Code != 0 ? JsonResponse.failed("Have error occurred", result) : JsonResponse.success(result, "Request sucessful"));
                                 //Thread.Sleep(3000);
-                                item.Bank.Dispose();
-                                ProcessingList.Remove(item);
+                                Task.Run(() => item.Bank.Dispose()).ContinueWith(async (t) =>
+                                {
+                                    await t;
+                                    ProcessingList.Remove(item);
+                                });
                             });
                         }
                     }

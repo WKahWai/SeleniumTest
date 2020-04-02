@@ -161,25 +161,25 @@ namespace SeleniumTest.Banks
             if (result.HasError || !result.IsComplete) throw new Exception("The previous steps have unexpected error occured so cannot proceed to waiting OTP response step");
             socket.Clients.Client(socket.ConnectionId).Receive(JsonResponse.success(null, "系统正在等待您收到的短信验证码，请检查您的手机"));
 
-            result = OTPListener((otp) =>
-            {
-                driver.FindElement(By.CssSelector("input[id^='otp']")).SendKeys(otp);
+            //result = OTPListener((otp) =>
+            //{
+            //    driver.FindElement(By.CssSelector("input[id^='otp']")).SendKeys(otp);
 
-                driver.FindElement(By.CssSelector("input[id^='btnSubmit']")).Click();
+            //    driver.FindElement(By.CssSelector("input[id^='btnSubmit']")).Click();
 
-                if (driver.FindElement(By.CssSelector("div[class^='errmsg']")) == null)
-                {
+            //    if (driver.FindElement(By.CssSelector("div[class^='errmsg']")) == null)
+            //    {
 
-                }
-                else
-                {
-                    driver.FindElement(By.CssSelector("input[id^='btnReset']")).Click();
-                    Thread.Sleep(2000);
-                    driver.FindElement(By.CssSelector("input[id^='btnSubmit']")).Click();
+            //    }
+            //    else
+            //    {
+            //        driver.FindElement(By.CssSelector("input[id^='btnReset']")).Click();
+            //        Thread.Sleep(2000);
+            //        driver.FindElement(By.CssSelector("input[id^='btnSubmit']")).Click();
 
-                }
-                return new Tuple<string, bool>(notificationBox?.Text, notificationBox == null);
-            });
+            //    }
+            //    return new Tuple<string, bool>(notificationBox?.Text, notificationBox == null);
+            //});
 
             if (result.HasError) throw new Exception("System have error during process the receive OTP");
             if (!result.IsComplete) throw new TransferProcessException("等待短信验证输入超时");
