@@ -318,6 +318,7 @@
       <DependentUpon>Global.asax</DependentUpon>
     </Compile>
     <Compile Include="Models\Bank.cs" />
+    <Compile Include="Models\Exceptions\StepLoopStop.cs" />
     <Compile Include="Models\Exceptions\TransferProcessException.cs" />
     <Compile Include="Models\JsonResponse.cs" />
     <Compile Include="Models\ProjectModel.cs" />

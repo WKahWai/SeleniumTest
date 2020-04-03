@@ -8,6 +8,7 @@ using BankAPI.Model;
 using System.Threading;
 using System.Configuration;
 using System.Net.Http;
+using SeleniumTest.Models.Exceptions;
 
 namespace SeleniumTest.Banks.Core
 {
@@ -24,6 +25,8 @@ namespace SeleniumTest.Banks.Core
         private bool disposeStatus = false;
         protected SocketItem socket;
         public bool IsWaitingOTP = false;
+        protected readonly bool SupportOTPRenew;
+
         public bool isDisposed() => disposeStatus;
 
         public static BankBase GetBank(SocketItem item)
@@ -57,10 +60,11 @@ namespace SeleniumTest.Banks.Core
             disposeStatus = true;
         }
 
-        public BankBase(SocketItem item, DriverToUse driverType = DriverToUse.HTTP)
+        public BankBase(SocketItem item, DriverToUse driverType = DriverToUse.HTTP, bool SupportOTPRenew = false)
         {
             driver = new DriverFactory().Create(driverType);
             socket = item;
+            this.SupportOTPRenew = SupportOTPRenew;
             param = item.param;
             this.driverType = driverType;
             defaultHandler = new HttpClientHandler
@@ -152,6 +156,10 @@ namespace SeleniumTest.Banks.Core
                         return StepLoopResult.Complete();
                     }
                 }
+                catch (StepLoopStop ex)
+                {
+                    return StepLoopResult.ForceBreak();
+                }
                 catch (TransferProcessException ex)
                 {
                     throw ex;
@@ -184,6 +192,10 @@ namespace SeleniumTest.Banks.Core
                     string _otp = GetClientResponse();
                     GetClientResponse = null;
                     if (string.IsNullOrEmpty(_otp)) return false;
+                    else if (_otp.ToLower() == "renew" && SupportOTPRenew)
+                    {
+                        throw new StepLoopStop();
+                    }
                     if (_otp.Length < 6 || _otp.Length > 6)
                     {
                         socket.Clients.Client(socket.ConnectionId).Receive(JsonResponse.success(null, "短信验证长度不符合标准，请确保输入正确的验证码"));
@@ -208,5 +220,6 @@ namespace SeleniumTest.Banks.Core
             IsWaitingOTP = false;
             return stepLoopResult;
         }
+
     }
 }

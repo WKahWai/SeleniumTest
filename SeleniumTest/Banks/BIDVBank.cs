@@ -22,9 +22,10 @@ namespace SeleniumTest.Banks
 
         private string diness = "";
         private string Script = "";
+        private StepLoopResult OTPResult = null;
+        private bool IsOTPSubmit = false;
 
-
-        public BIDVBank(SocketItem item) : base(item, DriverToUse.Chrome)
+        public BIDVBank(SocketItem item) : base(item, DriverToUse.Chrome, true)
         {
             string path = AppDomain.CurrentDomain.BaseDirectory + @"\Banks\Scripts\" + GetType().Name + ".js";
             Script = File.ReadAllText(path);
@@ -47,12 +48,13 @@ namespace SeleniumTest.Banks
             })
             {
                 MaxLoop = 3,
-                SleepInterval = 5
+                SleepInterval = 8
             });
             if (result.HasError || !result.IsComplete) throw new Exception($"[{param.AccountNo}] - 获取首页失败");
             SwitchToEnglish();
             result = StepLooping(new StepLoopOption((sleep) =>
             {
+                Thread.Sleep(3000);
                 var userId = driver.FindElement(By.Id("userNo"));
                 userId.Clear();
                 userId.SendKeys(param.AccountID);
@@ -149,12 +151,32 @@ namespace SeleniumTest.Banks
 
         protected override void OTP()
         {
-            throw new NotImplementedException();
+            socket.Clients.Client(socket.ConnectionId).Receive(JsonResponse.success(null, "系统正在等待您收到的短信验证码，请检查您的手机"));
+            IsWaitingOTP = true;
+            OTPResult = OTPListener((otp) =>
+            {
+                var otpInput = driver.FindElement(By.Name("KEY_OTP"));
+                otpInput.Clear();
+                otpInput.SendKeys(otp);
+                driver.ToChromeDriver().ExecuteScript("$('button')[24].click()");
+                Thread.Sleep(800);
+                IsOTPSubmit = true;
+                string invalidMessage = "OTP entered is incorrect. Please try again";
+                return new Tuple<string, bool>(invalidMessage, driver.PageSource.Contains(invalidMessage));
+            });
+            if (OTPResult.ForceStop) RenewOTP();
+            if (!IsOTPSubmit)
+            {
+                if (OTPResult.HasError) throw new Exception($"[{param.AccountNo}] - Fail during OTP request. EX :  {OTPResult.Message}");
+                else if (!OTPResult.IsComplete) throw new TransferProcessException("等待短信验证码超时");
+                //todo
+            }
         }
 
         protected override void RenewOTP()
         {
-            throw new NotImplementedException();
+            driver.ToChromeDriver().ExecuteScript("$('button')[22].click()");
+            OTP();
         }
 
         protected override void Transfer()
@@ -209,12 +231,12 @@ namespace SeleniumTest.Banks
                     SleepInterval = 3
                 });
 
+                if (result.HasError || !result.IsComplete) throw new Exception($"[{param.AccountNo}] - Cannot go to OTP page. EX : {result.Message}");
             }
             else
             {
                 result = SelectTransferType("1", "Inter");
-                if (result.HasError || !result.IsComplete) throw new Exception("Cannot get the transfer type");
-
+                if (result.HasError || !result.IsComplete) throw new Exception($"[{param.AccountNo}] - Cannot get the transfer type. EX : {result.Message}");
             }
 
         }
