@@ -81,7 +81,7 @@ namespace SeleniumTest.Banks
                         {
                             logger.Info($"Account [{param.AccountNo}] - Error occur during login. {message}");
                         }
-                        throw new Exception("Login failed");
+                        throw new TransferProcessException("登录失败，请确保密码或户名正确");
                     }
                 }
                 catch (Exception ex)
