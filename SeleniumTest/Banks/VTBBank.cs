@@ -27,33 +27,34 @@ namespace SeleniumTest.Banks
 
         protected override void Login()
         {
-            socket.Clients.Client(socket.ConnectionId).Receive(JsonResponse.success(null, "System start login the bank"));
+            //socket.Clients.Client(socket.ConnectionId).Receive(JsonResponse.success(null, "System start login the bank"));
+
             var condition = StepLooping(new StepLoopOption((sleep) =>
             {
                 driver.Url = "https://ebanking.vietinbank.vn/rcas/portal/web/retail/bflogin";
                 driver.Navigate();
+
                 SwitchToEnglish();
+
                 driver.SwitchTo().Frame(0);
                 sleep();
+
                 return driver.PageSource.Contains("Sign In");
             })
             {
                 MaxLoop = 2,
                 SleepInterval = 3
             });
+
             if (condition.HasError || !condition.IsComplete) throw new Exception("Timeout of getting login page");
+
 
             condition = StepLooping(new StepLoopOption((sleep) => 
             {
                 try
                 {
-                    var username = driver.FindElement(By.CssSelector("input[placeholder^='User Name']"));
-                    username.Clear();
-                    username.SendKeys(param.AccountID);
-
-                    var password = driver.FindElement(By.CssSelector("input[placeholder^='Password']"));
-                    password.Clear();
-                    password.SendKeys(param.Password);
+                    driver.ToChromeDriver().ExecuteScript("$('input[placeholder^=\"User Name\"]').val('"+ param.AccountID +"');");
+                    driver.ToChromeDriver().ExecuteScript("$('input[placeholder^=\"Password\"]').val('" + param.Password + "');");
 
                     driver.FindElement(By.CssSelector("input[value^='Sign In']")).Click();
 
@@ -68,10 +69,6 @@ namespace SeleniumTest.Banks
                         driver.FindElement(By.CssSelector("input[value^='Ok']")).Click();
                         return true;
                     }
-                    else if (driver.PageSource.Contains("Sign In"))
-                    {
-                        return false;
-                    }
                     else
                     {
                         string message = (string)driver.ToChromeDriver().ExecuteScript("return $('.mes_error').text()");
@@ -84,7 +81,7 @@ namespace SeleniumTest.Banks
                         {
                             logger.Info($"Account [{param.AccountNo}] - Error occur during login. {message}");
                         }
-                        throw new Exception("Login failed");
+                        throw new TransferProcessException("登录失败，请确保密码或户名正确");
                     }
                 }
                 catch (Exception ex)
@@ -109,7 +106,7 @@ namespace SeleniumTest.Banks
 
         protected override void Logout()
         {
-            socket.Clients.Client(socket.ConnectionId).Receive(JsonResponse.success(null, "System logout the bank"));
+            //socket.Clients.Client(socket.ConnectionId).Receive(JsonResponse.success(null, "System logout the bank"));
             try
             {
                 driver.ToChromeDriver().ExecuteScript("$('a[title^=\"Sign Out\"]').click();");
@@ -129,7 +126,6 @@ namespace SeleniumTest.Banks
             var result = StepLooping(new StepLoopOption((sleep) =>
             {
                 //匹配所有以下的資訊再點擊btnSubmit提交 否則取消交易 特別是在賬號名字不對的時候
-
                 IWebElement transferAccNoLabel = driver.FindElement(By.XPath("//*[contains(text(), 'Transfer')]"));
                 IWebElement transferAccNo = transferAccNoLabel.FindElement(By.XPath("./..")).FindElements(By.TagName("div"))[1];
 
@@ -161,25 +157,25 @@ namespace SeleniumTest.Banks
             if (result.HasError || !result.IsComplete) throw new Exception("The previous steps have unexpected error occured so cannot proceed to waiting OTP response step");
             socket.Clients.Client(socket.ConnectionId).Receive(JsonResponse.success(null, "系统正在等待您收到的短信验证码，请检查您的手机"));
 
-            //result = OTPListener((otp) =>
-            //{
-            //    driver.FindElement(By.CssSelector("input[id^='otp']")).SendKeys(otp);
+            result = OTPListener((otp) =>
+            {
+                driver.ToChromeDriver().ExecuteScript("$('input[id^=\"otp\"]').val('" + otp + "');");
+                driver.FindElement(By.CssSelector("input[id^='btnSubmit']")).Click();
 
-            //    driver.FindElement(By.CssSelector("input[id^='btnSubmit']")).Click();
-
-            //    if (driver.FindElement(By.CssSelector("div[class^='errmsg']")) == null)
-            //    {
-
-            //    }
-            //    else
-            //    {
-            //        driver.FindElement(By.CssSelector("input[id^='btnReset']")).Click();
-            //        Thread.Sleep(2000);
-            //        driver.FindElement(By.CssSelector("input[id^='btnSubmit']")).Click();
-
-            //    }
-            //    return new Tuple<string, bool>(notificationBox?.Text, notificationBox == null);
-            //});
+                IWebElement errorBox = null;
+                try
+                {
+                    errorBox = driver.FindElement(By.CssSelector("div[class^='errmsg']"));
+                }
+                catch
+                {
+                    errorBox = null;
+                    driver.FindElement(By.CssSelector("input[id^='btnReset']")).Click();
+                    Thread.Sleep(2000);
+                    driver.FindElement(By.CssSelector("input[id^='btnSubmit']")).Click();
+                }
+                return new Tuple<string, bool>(errorBox?.Text, errorBox == null);
+            });
 
             if (result.HasError) throw new Exception("System have error during process the receive OTP");
             if (!result.IsComplete) throw new TransferProcessException("等待短信验证输入超时");
@@ -205,17 +201,19 @@ namespace SeleniumTest.Banks
                     var selectedAccount = "(VND) - 104868097259";
                     var data = SelectUserAccount(selectedAccount);
 
-                    driver.FindElement(By.CssSelector("input[id^='toAcct']")).SendKeys(param.RecipientAccount);
-                    driver.FindElement(By.CssSelector("input[id^='amt']")).SendKeys(param.Amount.ToString());
-                    driver.FindElement(By.CssSelector("textarea[id^='memo']")).SendKeys(param.Remark);
+                    driver.ToChromeDriver().ExecuteScript("$('input[id^=\"toAcct\"]').val('" + param.RecipientAccount + "');");
+                    driver.ToChromeDriver().ExecuteScript("$('input[id^=\"amt\"]').val('" + param.Amount.ToString() + "');");
+                    driver.ToChromeDriver().ExecuteScript("$('textarea[id^=\"memo\"]').val('" + param.Remark + "');");
 
                     driver.FindElement(By.CssSelector("input[id^='btnSubmit']")).Click();
 
-                    if (driver.FindElement(By.CssSelector("div[id^='serverErrorMsg']")) == null)
+                    IWebElement errorBox = null;
+                    try
                     {
+                        errorBox = driver.FindElement(By.CssSelector("div[id^='serverErrorMsg']"));
                         return true;
                     }
-                    else
+                    catch
                     {
                         driver.FindElement(By.CssSelector("input[id^='btnReset']")).Click();
                         return false;
@@ -246,8 +244,7 @@ namespace SeleniumTest.Banks
                 var account = item.Text;
                 driver.FindElement(By.XPath("//*[contains(text(), '"+ account +"')]")).Click();
 
-                var script = "return $(\"input[id^='currBalance']\").val()";
-                var balance = driver.ToChromeDriver().ExecuteScript(script);
+                var balance = driver.ToChromeDriver().ExecuteScript("return $(\"input[id^='currBalance']\").val()");
 
                 list.Add(account + " - " + balance);
             });

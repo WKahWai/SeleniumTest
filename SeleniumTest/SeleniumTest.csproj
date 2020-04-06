@@ -311,6 +311,7 @@
     <Compile Include="Banks\BIDVBank.cs" />
     <Compile Include="Banks\Core\BankBase.cs" />
     <Compile Include="Banks\VCBBank.cs" />
+    <Compile Include="Banks\VIBBank.cs" />
     <Compile Include="Banks\VTBBank.cs" />
     <Compile Include="Controllers\HomeController.cs" />
     <Compile Include="Controllers\BanksController.cs" />

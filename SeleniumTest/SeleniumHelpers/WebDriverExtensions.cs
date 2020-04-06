@@ -3,6 +3,8 @@ using OpenQA.Selenium.Chrome;
 using OpenQA.Selenium.IE;
 using System;
 using System.Collections.Generic;
+using System.Drawing;
+using System.IO;
 using System.Linq;
 using System.Net;
 using System.Threading;
@@ -39,12 +41,23 @@ namespace SeleniumTest.SeleniumHelpers
             return elements.FirstOrDefault() as IWebElement;
         }
 
-        private static IEnumerable<object> FindElements(IWebDriver driver, string selector)
+        public static IEnumerable<object> FindElements(IWebDriver driver, string selector)
         {
             const string ret = "return ";
             var result = ((IJavaScriptExecutor)driver).ExecuteScript(
                 (selector.StartsWith(ret, StringComparison.InvariantCultureIgnoreCase) ? string.Empty : ret) + selector);
             return result as IEnumerable<object>;
+        }
+
+        public static Bitmap GetScreenshot(this IWebDriver driver)
+        {
+            var screenshot = ((ITakesScreenshot)driver).GetScreenshot();
+            Bitmap screenshotImage;
+            using (MemoryStream memStream = new MemoryStream(screenshot.AsByteArray))
+            {
+                screenshotImage = new Bitmap(memStream);
+            }
+            return screenshotImage;
         }
 
         public static ChromeDriver ToChromeDriver(this IWebDriver driver)
