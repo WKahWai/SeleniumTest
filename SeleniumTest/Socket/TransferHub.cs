@@ -93,7 +93,7 @@ namespace SeleniumTest.Socket
                             Task.Run(() => item.Bank.Start()).ContinueWith(async (task) =>
                             {
                                 TransactionResult result = await task;
-                                item.Clients.Client(item.ConnectionId).Receive(result.Code != 0 ? JsonResponse.failed("Have error occurred", result) : JsonResponse.success(result, "Request sucessful"));
+                                item.Clients.Client(item.ConnectionId).Receive(result.Code != 0 ? JsonResponse.failed(result.Message ?? "Have error occurred", result, result.Code) : JsonResponse.success(result, result.Message ?? "Request success"));
                                 //Thread.Sleep(3000);
                                 Task.Run(() => item.Bank.Dispose()).ContinueWith(async (t) =>
                                 {

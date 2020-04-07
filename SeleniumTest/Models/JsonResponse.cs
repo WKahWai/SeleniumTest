@@ -20,6 +20,10 @@ namespace SeleniumTest.Models
         /// 反应的信息
         /// </summary>
         public string message { get; set; }
+        /// <summary>
+        /// 0 = 成功，1 = Critcal error
+        /// </summary>
+        public int code { get; set; }
 
         /// <summary>
         /// 返回成功的JSON包装
@@ -29,7 +33,7 @@ namespace SeleniumTest.Models
         /// <returns>成功的JSON 格式包装</returns>
         public static JsonResponse success(object data, string message)
         {
-            return new JsonResponse { data = data, hasError = false, message = message };
+            return new JsonResponse { data = data, hasError = false, message = message, code = 0 };
         }
         /// <summary>
         /// 返回成功的JSON包装
@@ -37,9 +41,9 @@ namespace SeleniumTest.Models
         /// <param name="data">返回的数据</param>
         /// <param name="message">反应的信息</param>
         /// <returns>失败的JSON 格式包装</returns>
-        public static JsonResponse failed(string message, object data = null)
+        public static JsonResponse failed(string message, object data = null, int code = 1)
         {
-            return new JsonResponse { data = data, hasError = true, message = message };
+            return new JsonResponse { data = data, hasError = true, message = message, code = code };
         }
 
         public override string ToString()
