@@ -190,25 +190,29 @@ namespace SeleniumTest.Banks.Core
                 if (GetClientResponse != null)
                 {
                     string _otp = GetClientResponse();
-                    GetClientResponse = null;
-                    if (string.IsNullOrEmpty(_otp)) return false;
-                    else if (_otp.ToLower() == "renew" && SupportOTPRenew)
+                    if (_otp.Contains("otp|"))
                     {
-                        throw new StepLoopStop();
-                    }
-                    if (_otp.Length < 6 || _otp.Length > 6)
-                    {
-                        socket.Clients.Client(socket.ConnectionId).Receive(JsonResponse.success(null, "短信验证长度不符合标准，请确保输入正确的验证码"));
-                        return false;
-                    }
-                    else
-                    {
-                        Tuple<string, bool> result = condition(_otp);
-                        if (result.Item2)
+                        GetClientResponse = null;
+                        if (string.IsNullOrEmpty(_otp)) return false;
+                        else if (_otp.ToLower() == "otp|renew" && SupportOTPRenew)
                         {
-                            return true;
+                            throw new StepLoopStop();
                         }
-                        else throw new TransferProcessException(result.Item1 ?? "验证码不正确，无法转账。");
+                        _otp = _otp.Split('|')[1];
+                        if (_otp.Length < 6 || _otp.Length > 6)
+                        {
+                            socket.Clients.Client(socket.ConnectionId).Receive(JsonResponse.success(null, "短信验证长度不符合标准，请确保输入正确的验证码"));
+                            return false;
+                        }
+                        else
+                        {
+                            Tuple<string, bool> result = condition(_otp);
+                            if (result.Item2)
+                            {
+                                return true;
+                            }
+                            else throw new TransferProcessException(result.Item1 ?? "验证码不正确，无法转账。");
+                        }
                     }
                 }
                 return false;

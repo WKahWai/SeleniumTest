@@ -129,7 +129,7 @@ namespace SeleniumTest.Socket
                 var target = ProcessingList.FirstOrDefault(c => c.ConnectionId == Context.ConnectionId);
                 if (target != null)
                 {
-                    if (target.Bank.IsWaitingOTP) target.Bank.GetClientResponse = () => data;
+                    target.Bank.GetClientResponse = () => data;
                 }
             }
         }

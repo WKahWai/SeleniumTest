@@ -33,7 +33,26 @@ namespace SeleniumTest.Banks
 
         protected override void CheckTransferStatus()
         {
-            throw new NotImplementedException();
+            StepLoopResult result = null;
+            if (param.IsSameBank)
+            {
+                result = StepLooping(new StepLoopOption((sleep) =>
+                {
+                    logger.Debug("TransferOk" + driver.PageSource);
+                    sleep();
+                    var time = DateTime.Now.ToString("dd/MM/yyyy");
+                    return ((driver.PageSource.Contains("Số tham chiếu") || driver.PageSource.ToLower().Contains("reference number")) && driver.PageSource.Contains("class=\" CONF_OD_SUCCESS_IMG\"") && driver.PageSource.Contains("class=\" CONF_OD_FAILURE_IMG x-hide-display\""));
+            })
+                {
+                    MaxLoop = 15,
+                    SleepInterval = 1
+                });
+            }
+            else
+            {
+                throw new NotImplementedException();
+            }
+            if (result.HasError || !result.IsComplete) throw new Exception("Transfer failed");
         }
 
         protected override void Login()
@@ -153,23 +172,30 @@ namespace SeleniumTest.Banks
         {
             socket.Clients.Client(socket.ConnectionId).Receive(JsonResponse.success(null, "系统正在等待您收到的短信验证码，请检查您的手机"));
             IsWaitingOTP = true;
-            OTPResult = OTPListener((otp) =>
+            if (param.IsSameBank)
             {
-                var otpInput = driver.FindElement(By.Name("KEY_OTP"));
-                otpInput.Clear();
-                otpInput.SendKeys(otp);
-                driver.ToChromeDriver().ExecuteScript("$('button')[24].click()");
-                Thread.Sleep(800);
-                IsOTPSubmit = true;
-                string invalidMessage = "OTP entered is incorrect. Please try again";
-                return new Tuple<string, bool>(invalidMessage, driver.PageSource.Contains(invalidMessage));
-            });
-            if (OTPResult.ForceStop) RenewOTP();
-            if (!IsOTPSubmit)
+                OTPResult = OTPListener((otp) =>
+                {
+                    var otpInput = driver.FindElement(By.Name("KEY_OTP"));
+                    otpInput.Clear();
+                    otpInput.SendKeys(otp);
+                    driver.ToChromeDriver().ExecuteScript("$('button')[24].click()");
+                    Thread.Sleep(800);
+                    IsOTPSubmit = true;
+                    string invalidMessage = "OTP entered is incorrect. Please try again";
+                    return new Tuple<string, bool>(invalidMessage, driver.PageSource.Contains(invalidMessage));
+                });
+                if (OTPResult.ForceStop) RenewOTP();
+                if (!IsOTPSubmit)
+                {
+                    if (OTPResult.HasError) throw new Exception($"[{param.AccountNo}] - Fail during OTP request. EX :  {OTPResult.Message}");
+                    else if (!OTPResult.IsComplete) throw new TransferProcessException("等待短信验证码超时");
+                    //todo
+                }
+            }
+            else
             {
-                if (OTPResult.HasError) throw new Exception($"[{param.AccountNo}] - Fail during OTP request. EX :  {OTPResult.Message}");
-                else if (!OTPResult.IsComplete) throw new TransferProcessException("等待短信验证码超时");
-                //todo
+                throw new NotImplementedException();
             }
         }
 

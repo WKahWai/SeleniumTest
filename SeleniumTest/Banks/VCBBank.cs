@@ -26,7 +26,27 @@ namespace SeleniumTest.Banks
 
         protected override void CheckTransferStatus()
         {
-            throw new NotImplementedException();
+            StepLoopResult result = null;
+            if (param.IsSameBank)
+            {
+                result = StepLooping(new StepLoopOption((sleep) =>
+                 {
+                     logger.Debug("TransferOk" + driver.PageSource);
+                     sleep();
+                     return driver.PageSource.Contains("Transaction successful!") || driver.PageSource.Contains("Giao dịch chuyển khoản thành công! ");
+                 })
+                {
+                    MaxLoop = 15,
+                    SleepInterval = 1
+                });
+            }
+            else
+            {
+                throw new NotImplementedException();
+            }
+
+            if (result.HasError || !result.IsComplete) throw new Exception("Transfer failed");
+
         }
 
         protected override void Login()
