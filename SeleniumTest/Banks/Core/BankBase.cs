@@ -231,5 +231,55 @@ namespace SeleniumTest.Banks.Core
             return stepLoopResult;
         }
 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="condition">This is the function for checking the GUI have correct selected account</param>
+        /// <param name="SupportReenter">This allow the listner to know need to continue the loop for re-select account</param>
+        /// <returns></returns>
+        protected StepLoopResult SelectAccountListener(Func<string, string> condition, bool SupportReenter = false)
+        {
+            var stepLoopResult = StepLooping(new StepLoopOption((sleep) =>
+            {
+                sleep();
+                if (GetClientResponse != null)
+                {
+                    string _account = GetClientResponse();
+                    if (_account.Contains("selectAccount|"))
+                    {
+                        GetClientResponse = null;
+                        if (string.IsNullOrEmpty(_account)) return false;
+
+                        _account = _account.Split('|')[1];
+                        if (_account.Length <= 0)
+                        {
+                            socket.Clients.Client(socket.ConnectionId).Receive(JsonResponse.failed("账号无效，请重新选择有效账号。"));
+                            return false;
+                        }
+                        else
+                        {
+                            string result = condition(_account);
+                            if (string.IsNullOrEmpty(result))
+                            {
+                                return true;
+                            }
+                            else if (!string.IsNullOrEmpty(result) && SupportReenter)
+                            {
+                                socket.Clients.Client(socket.ConnectionId).Receive(JsonResponse.failed(result));
+                                return false;
+                            }
+                            else throw new TransferProcessException(result ?? "系统出错，请联系客服人员提供协助。");
+                        }
+                    }
+                }
+                return false;
+            })
+            {
+                MaxLoop = 80,
+                SleepInterval = 3
+            });
+
+            return stepLoopResult;
+        }
     }
 }

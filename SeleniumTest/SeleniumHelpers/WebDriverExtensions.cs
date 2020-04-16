@@ -60,6 +60,32 @@ namespace SeleniumTest.SeleniumHelpers
             return screenshotImage;
         }
 
+        public static bool IsElementPresent(this IWebDriver driver, By by)
+        {
+            try
+            {
+                driver.FindElement(by);
+                return true;
+            }
+            catch (NoSuchElementException)
+            {
+                return false;
+            }
+        }
+
+        public static string CloseAlertAndGetItsText(this IWebDriver driver)
+        {
+            var alert = driver.SwitchTo().Alert();
+            alert.Accept();
+            return alert.Text;
+        }
+
+        public static void CloseAlert(this IWebDriver driver)
+        {
+            var alert = driver.SwitchTo().Alert();
+            alert.Accept();
+        }
+
         public static ChromeDriver ToChromeDriver(this IWebDriver driver)
         {
             try

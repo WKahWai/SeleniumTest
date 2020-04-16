@@ -17,13 +17,13 @@ namespace SeleniumTest.Models
         {
             return new TransactionResult()
             {
-                Code = 0,
+                Code = 600,
                 Message = message,
                 Result = data
             };
         }
 
-        public static TransactionResult Failed(string message, int code = 1)
+        public static TransactionResult Failed(string message, int code = 500)
         {
             return new TransactionResult()
             {

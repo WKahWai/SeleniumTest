@@ -55,8 +55,9 @@
     <Reference Include="EntityFramework.SqlServer, Version=6.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089, processorArchitecture=MSIL">
       <HintPath>..\packages\EntityFramework.6.3.0\lib\net45\EntityFramework.SqlServer.dll</HintPath>
     </Reference>
-    <Reference Include="JZLibraries_Bank">
-      <HintPath>..\packages\JZLibraries_Bank.1.4.31\lib\net45\JZLibraries_Bank.dll</HintPath>
+    <Reference Include="JZLibraries_Bank, Version=1.4.28.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\..\..\..\Desktop\JZLibraries_Bank.dll</HintPath>
     </Reference>
     <Reference Include="Microsoft.AspNet.SignalR.Core, Version=2.4.1.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
       <HintPath>..\packages\Microsoft.AspNet.SignalR.Core.2.4.1\lib\net45\Microsoft.AspNet.SignalR.Core.dll</HintPath>
@@ -331,7 +332,6 @@
     <Compile Include="SeleniumHelpers\DriverFactory.cs" />
     <Compile Include="SeleniumHelpers\ExtendedRemoteWebDriver.cs" />
     <Compile Include="SeleniumHelpers\SeleniumHelper.cs" />
-    <Compile Include="SeleniumHelpers\SeleniumUtils.cs" />
     <Compile Include="SeleniumHelpers\WebDriverExtensions.cs" />
     <Compile Include="Socket\TransferHub.cs" />
     <Compile Include="Startup.cs" />

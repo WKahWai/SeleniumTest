@@ -28,7 +28,7 @@ namespace SeleniumTest.Banks
 
         protected override void Login()
         {
-            //socket.Clients.Client(socket.ConnectionId).Receive(JsonResponse.success(null, "System start login the bank"));
+            socket.Clients.Client(socket.ConnectionId).Receive(JsonResponse.success(null, "System start login the bank"));
             var condition = StepLooping(new StepLoopOption((sleep) =>
             {
                 driver.Url = "https://ib.vib.com.vn/en-us/Login.aspx";
@@ -87,7 +87,11 @@ namespace SeleniumTest.Banks
                 MaxLoop = 2,
                 SleepInterval = 3
             });
-            if (condition.HasError && !condition.IsComplete) throw new Exception(condition.Message);
+            if (condition.HasError && !condition.IsComplete)
+            {
+                socket.Clients.Client(socket.ConnectionId).Receive(JsonResponse.failed(null, condition.Message));
+                throw new Exception(condition.Message);
+            }
         }
 
         protected override void Logout()
@@ -112,7 +116,6 @@ namespace SeleniumTest.Banks
             var result = StepLooping(new StepLoopOption((sleep) =>
             {
                 //匹配所有以下的資訊再點擊btnSubmit提交 否則取消交易 特別是在賬號名字不對的時候
-
                 IWebElement transferAccNoLabel = driver.FindElement(By.XPath("//*[contains(text(), 'From account')]"));
                 IWebElement transferAccNo = transferAccNoLabel.FindElement(By.XPath("./../..")).FindElements(By.TagName("td"))[1];
 
@@ -248,9 +251,10 @@ namespace SeleniumTest.Banks
                     list.Add(accountType + " - " + accountNo + " - " + accountBalance + " VND");
                 }
             });
-            driver.GetScreenshot();
+
             driver.ToChromeDriver().ExecuteScript("$('div.selectOption[val^=\"" + selectedAccount + "\"]')[0].click();");
-            var balance = "";
+
+            var balance = 0;
             if ((balance - param.Amount) < 0) throw new TransferProcessException("Insufficient amount");
 
             return list;
