@@ -25,8 +25,7 @@ namespace SeleniumTest.Controllers
         [HttpGet]
         public JsonResponse List()
         {
-            List<string> list = Enum.GetValues(typeof(Bank)).Cast<Bank>().Select(c => c.ToString()).ToList();
-            return JsonResponse.success(list, "Request successful");
+            return JsonResponse.success(BankBase.GetBankInfoList(), "Request successful");
             //return JsonResponse.success(new TransferParam(), "");
         }
 

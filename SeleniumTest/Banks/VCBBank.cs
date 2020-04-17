@@ -21,12 +21,7 @@ namespace SeleniumTest.Banks
     {
         public VCBBank(SocketItem item) : base(item, DriverToUse.Chrome)
         {
-            bankInfo = new BankInfo
-            {
-                ReenterOTP = true,
-                SelectAccount = false,
-                RenewableOtp = false
-            };
+            bankInfo = GetBankInfoByBank(Bank.VCBBank);
         }
 
         protected override void CheckTransferStatus()

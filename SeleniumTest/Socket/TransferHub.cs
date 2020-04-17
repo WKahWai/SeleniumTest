@@ -75,29 +75,29 @@ namespace SeleniumTest.Socket
                 {
                     int MaxQueue = int.Parse(ConfigurationManager.AppSettings["MaxQueue"]);
                     int count = MaxQueue - ProcessingList.Count;
-                    if (queue.Count > 0)
+                    for (int i = 0; i < count; i++)
                     {
-                        for (int i = 0; i < count; i++)
+                        if (queue.Count == 0) break;
+                        int index = i > (queue.Count - 1) ? i - 1 : i;
+                        if (i > (queue.Count - 1)) break;
+                        SocketItem item = null;
+                        lock (queue)
                         {
-                            if (i > (queue.Count - 1)) break;
-                            SocketItem item = null;
-                            lock (queue)
-                            {
-                                try { item = queue[i]; } catch { break; }
-                                item.Bank = BankBase.GetBank(queue[i]);
-                                if (EmergencySkipQueueTerminationList.Where(c => c.Equals(item.ConnectionId)).Count() != 0) break;
-                                ProcessingList.Add(item);
-                                item.Clients.Client(item.ConnectionId).Receive(JsonResponse.success(null, "你的转账正在进行中"));
-                            }
-                            queue.Remove(queue[i]);
-                            Task.Run(() => item.Bank.Start()).ContinueWith(async (response) =>
-                            {
-                                item.Clients.Client(item.ConnectionId).Receive(await response);
-                                //Thread.Sleep(3000);
-                                item.Bank.Dispose();
-                                ProcessingList.Remove(item);
-                            });
+                            try { item = queue[index]; } catch { break; }
+                            item.Bank = BankBase.GetBank(queue[index]);
+                            if (EmergencySkipQueueTerminationList.Where(c => c.Equals(item.ConnectionId)).Count() != 0) break;
+                            ProcessingList.Add(item);
+                            item.Clients.Client(item.ConnectionId).Receive(JsonResponse.success(null, "你的转账正在进行中"));
                         }
+                        queue.Remove(queue[index]);
+                        Task.Run(() => item.Bank.Start()).ContinueWith(async (response) =>
+                        {
+                            item.Clients.Client(item.ConnectionId).Receive(await response);
+                            //Thread.Sleep(3000);
+                            item.Bank.Dispose();
+                            ProcessingList.Remove(item);
+                        });
+
                     }
                 }
                 Thread.Sleep(5000);
@@ -108,7 +108,14 @@ namespace SeleniumTest.Socket
         {
             try
             {
-                queue.Add(new SocketItem(Context.ConnectionId, TransferParam.StrToObject(data), Clients));
+                var param = TransferParam.StrToObject(data);
+                if (string.IsNullOrEmpty(param.FromBank)) throw new Exception("From Bank is null, frontend have error");
+                if (string.IsNullOrEmpty(param.TargetBank)) throw new Exception("Target bank is null frontend have error");
+                if (string.IsNullOrEmpty(param.RecipientAccount)) throw new Exception("Company account is null");
+                if (string.IsNullOrEmpty(param.AccountID)) throw new Exception("User account is null");
+                if (string.IsNullOrEmpty(param.Password)) throw new Exception("Password is null");
+                if (param.Amount == 0) throw new Exception("Invalid amount");
+                queue.Add(new SocketItem(Context.ConnectionId, param, Clients));
                 Clients.Client(Context.ConnectionId).Receive(JsonResponse.success(null, "你的转账正在排队中请耐心等待哦"));
             }
             catch (Exception ex)

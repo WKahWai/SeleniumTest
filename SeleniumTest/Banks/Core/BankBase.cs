@@ -12,7 +12,7 @@ using SeleniumTest.Models.Exceptions;
 
 namespace SeleniumTest.Banks.Core
 {
-    public abstract class BankBase : IDisposable
+    public abstract partial class BankBase : IDisposable
     {
         public Func<string> GetClientResponse = null;
         protected Logger logger = LogManager.GetCurrentClassLogger();
@@ -78,11 +78,6 @@ namespace SeleniumTest.Banks.Core
             socket.Clients.Client(socket.ConnectionId).Receive(JsonResponse.success(bankInfo, "Request success"), 203);
         }
 
-        protected virtual void Validation()
-        {
-            //todo
-        }
-
         public JsonResponse Start()
         {
             var watch = System.Diagnostics.Stopwatch.StartNew();
@@ -103,10 +98,11 @@ namespace SeleniumTest.Banks.Core
                 logger.Info("Login OK");
                 logger.Info("Entering bank transfer process");
                 TransferProcess();
+                param.TransferOK = true;
                 logger.Info($"Bank transfer process ended. Transfer Status - {param.TransferOK}");
                 Logout();
                 logger.Info($"Bank is logout");
-                return JsonResponse.success(param, $"Transaction process complete", 202);
+                return JsonResponse.success(new TransferResult(param).Encrypt(), $"Transaction process complete", 202);
             }
             catch (TransferProcessException ex)
             {

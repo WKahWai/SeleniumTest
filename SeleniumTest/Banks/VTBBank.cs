@@ -18,12 +18,7 @@ namespace SeleniumTest.Banks
     {
         public VTBBank(SocketItem item) : base(item, DriverToUse.Chrome)
         {
-            bankInfo = new BankInfo
-            {
-                ReenterOTP = true,
-                SelectAccount = true,
-                RenewableOtp = false
-            };
+            bankInfo = GetBankInfoByBank(Bank.VTBBank);
         }
 
         private void SwitchToEnglish()

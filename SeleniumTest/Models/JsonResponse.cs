@@ -31,7 +31,7 @@ namespace SeleniumTest.Models
         /// <param name="data">返回的数据</param>
         /// <param name="message">反应的信息</param>
         /// <returns>成功的JSON 格式包装</returns>
-        public static JsonResponse success(object data, string message, int code = 0)
+        public static JsonResponse success(object data, string message, int code = 204)
         {
             return new JsonResponse { data = data, hasError = false, message = message, code = code };
         }
