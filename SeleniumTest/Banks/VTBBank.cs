@@ -18,7 +18,12 @@ namespace SeleniumTest.Banks
     {
         public VTBBank(SocketItem item) : base(item, DriverToUse.Chrome)
         {
-
+            bankInfo = new BankInfo
+            {
+                ReenterOTP = true,
+                SelectAccount = true,
+                RenewableOtp = false
+            };
         }
 
         private void SwitchToEnglish()
@@ -226,7 +231,7 @@ namespace SeleniumTest.Banks
 
             if (result.HasError || !result.IsComplete) throw new Exception("The previous steps have unexpected error occured so cannot proceed to waiting OTP response step");
             socket.Clients.Client(socket.ConnectionId).Receive(JsonResponse.success(null, "系统正在等待您收到的短信验证码，请检查您的手机", 200));
-
+            IsWaitingOTP = true;
             result = OTPListener((otp) =>
             {
                 driver.ToChromeDriver().ExecuteScript("$('input[id^=\"otp\"]').val('" + otp + "');");
@@ -261,7 +266,6 @@ namespace SeleniumTest.Banks
                 }
                 return new Tuple<string, bool>(errorBox?.Text, errorBox == null);
             });
-
             if (result.HasError) throw new Exception("System have error during process the receive OTP");
             if (!result.IsComplete) throw new TransferProcessException("等待短信验证输入超时");
         }

@@ -49,15 +49,6 @@ namespace SeleniumTest.Controllers
             return "yes";
         }
 
-        [HttpPost]
-        public JsonResponse Transfer([FromBody] TransferParam param)
-        {
-            using (BankBase bank = BankBase.GetBank(new SocketItem("", param, null)))
-            {
-                var result = bank.Start();
-                return result.Code != 0 ? JsonResponse.failed("Have error occurred", result) : JsonResponse.success(result, "Request sucessful");
-            }
-        }
         // POST api/values
         public void Post([FromBody]string value)
         {

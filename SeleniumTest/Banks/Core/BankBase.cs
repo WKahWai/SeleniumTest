@@ -25,7 +25,7 @@ namespace SeleniumTest.Banks.Core
         private bool disposeStatus = false;
         protected SocketItem socket;
         public bool IsWaitingOTP = false;
-        protected readonly bool SupportOTPRenew;
+        protected BankInfo bankInfo;
 
         public bool isDisposed() => disposeStatus;
 
@@ -60,11 +60,10 @@ namespace SeleniumTest.Banks.Core
             disposeStatus = true;
         }
 
-        public BankBase(SocketItem item, DriverToUse driverType = DriverToUse.HTTP, bool SupportOTPRenew = false)
+        public BankBase(SocketItem item, DriverToUse driverType = DriverToUse.HTTP)
         {
             driver = new DriverFactory().Create(driverType);
             socket = item;
-            this.SupportOTPRenew = SupportOTPRenew;
             param = item.param;
             this.driverType = driverType;
             defaultHandler = new HttpClientHandler
@@ -76,6 +75,7 @@ namespace SeleniumTest.Banks.Core
             http = new HttpClient(defaultHandler);
             http.Timeout = TimeSpan.FromMinutes(5);
             logger.Info($"Received account info : {param.ToJson()}");
+            socket.Clients.Client(socket.ConnectionId).Receive(JsonResponse.success(bankInfo, "Request success"), 203);
         }
 
         protected virtual void Validation()
@@ -83,19 +83,18 @@ namespace SeleniumTest.Banks.Core
             //todo
         }
 
-        public TransactionResult Start()
+        public JsonResponse Start()
         {
             var watch = System.Diagnostics.Stopwatch.StartNew();
-            TransactionResult tranResult = null;
             logger.Info("Transaction process being complete via chorme driver");
-            tranResult = BeginStep();
+            var tranResult = BeginStep();
             watch.Stop();
             var elapsedMs = watch.ElapsedMilliseconds;
             logger.Info($"Transfer time taken for account - {param.AccountNo} is {elapsedMs} ms");
             return tranResult;
         }
 
-        private TransactionResult BeginStep()
+        private JsonResponse BeginStep()
         {
             try
             {
@@ -107,26 +106,26 @@ namespace SeleniumTest.Banks.Core
                 logger.Info($"Bank transfer process ended. Transfer Status - {param.TransferOK}");
                 Logout();
                 logger.Info($"Bank is logout");
-                return TransactionResult.Success($"Transaction process complete", param);
+                return JsonResponse.success(param, $"Transaction process complete", 202);
             }
             catch (TransferProcessException ex)
             {
                 logger.Info($"[{param.AccountNo}] - Transfer Stop due to - {ex.Message}");
-                return TransactionResult.Failed(ex.Message, 1);
+                return JsonResponse.failed(ex.Message, null, ex.ErrorCode);
             }
             catch (Exception ex)
             {
                 if (disposeStatus)
                 {
                     logger.Info("Object have been terminated");
-                    return TransactionResult.Success($"转账以终止", param);
+                    return JsonResponse.success(param, $"转账以终止", 201);
                 }
                 else
                 {
                     logger.Info($"[{param.AccountNo}] - Error occur");
                     logger.Error($"[{param.AccountNo}] - {ex.Message}");
                 }
-                return TransactionResult.Failed($"转账中发生未处理到的错误", 500);
+                return JsonResponse.failed($"转账中发生未处理到的错误", null, 401);
             }
         }
 
@@ -188,14 +187,14 @@ namespace SeleniumTest.Banks.Core
             var stepLoopResult = StepLooping(new StepLoopOption((sleep) =>
             {
                 sleep();
-                if (GetClientResponse != null)
+                if (GetClientResponse != null && IsWaitingOTP)
                 {
                     string _otp = GetClientResponse();
                     if (_otp.Contains("otp|"))
                     {
                         GetClientResponse = null;
                         if (string.IsNullOrEmpty(_otp)) return false;
-                        else if (_otp.ToLower() == "otp|renew" && SupportOTPRenew)
+                        else if (_otp.ToLower() == "otp|renew" && bankInfo.RenewableOtp)
                         {
                             throw new StepLoopStop();
                         }

@@ -18,7 +18,12 @@ namespace SeleniumTest.Banks
     {
         public VIBBank(SocketItem item) : base(item, DriverToUse.Chrome)
         {
-
+            bankInfo = new BankInfo
+            {
+                ReenterOTP = false,
+                SelectAccount = true,
+                RenewableOtp = false
+            };
         }
 
         protected override void CheckTransferStatus()
@@ -42,11 +47,11 @@ namespace SeleniumTest.Banks
             });
             if (condition.HasError || !condition.IsComplete) throw new Exception("Timeout of getting login page");
 
-            condition = StepLooping(new StepLoopOption((sleep) => 
+            condition = StepLooping(new StepLoopOption((sleep) =>
             {
                 try
                 {
-                    driver.ToChromeDriver().ExecuteScript("$('input[placeholder^=\"Username\"]').val('" + param.AccountID +"');");
+                    driver.ToChromeDriver().ExecuteScript("$('input[placeholder^=\"Username\"]').val('" + param.AccountID + "');");
 
                     var passwordInput = driver.FindElement(By.CssSelector("input[placeholder^=\"Password\"]"));
                     passwordInput.Clear();
@@ -102,7 +107,7 @@ namespace SeleniumTest.Banks
                 driver.ToChromeDriver().ExecuteScript("$('a[title^=\"Sign Out\"]').click();");
                 Thread.Sleep(2000);
                 logger.Info($"Account [{param.AccountNo}] - Logout successful");
-            }   
+            }
             catch (Exception ex)
             {
                 logger.Info($"Account [{param.AccountNo}] - Logout failed");
@@ -142,7 +147,7 @@ namespace SeleniumTest.Banks
 
             if (result.HasError || !result.IsComplete) throw new Exception("The previous steps have unexpected error occured so cannot proceed to waiting OTP response step");
             socket.Clients.Client(socket.ConnectionId).Receive(JsonResponse.success(null, "系统正在等待您收到的短信验证码，请检查您的手机"));
-
+            IsWaitingOTP = true;
             result = OTPListener((otp) =>
             {
                 IWebElement referenceValue2 = driver.FindElement(By.Id("txtotp1"));
@@ -159,8 +164,7 @@ namespace SeleniumTest.Banks
                     errorBox = null;
                 }
                 return new Tuple<string, bool>(errorBox?.Text, errorBox == null);
-            });
-
+            }, bankInfo.ReenterOTP);
             if (result.HasError) throw new Exception("System have error during process the receive OTP");
             if (!result.IsComplete) throw new TransferProcessException("等待短信验证输入超时");
         }

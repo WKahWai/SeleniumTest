@@ -21,7 +21,12 @@ namespace SeleniumTest.Banks
     {
         public VCBBank(SocketItem item) : base(item, DriverToUse.Chrome)
         {
-
+            bankInfo = new BankInfo
+            {
+                ReenterOTP = true,
+                SelectAccount = false,
+                RenewableOtp = false
+            };
         }
 
         protected override void CheckTransferStatus()
@@ -200,7 +205,7 @@ namespace SeleniumTest.Banks
                         notificationBox = null;
                     }
                     return new Tuple<string, bool>(notificationBox?.Text, notificationBox == null);
-                });
+                }, bankInfo.ReenterOTP);
                 if (result.HasError) throw new Exception("System have error during process the receive OTP");
                 if (!result.IsComplete) throw new TransferProcessException("等待短信验证输入超时");
             }

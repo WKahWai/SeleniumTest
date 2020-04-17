@@ -25,8 +25,14 @@ namespace SeleniumTest.Banks
         private StepLoopResult OTPResult = null;
         private bool IsOTPSubmit = false;
 
-        public BIDVBank(SocketItem item) : base(item, DriverToUse.Chrome, true)
+        public BIDVBank(SocketItem item) : base(item, DriverToUse.Chrome)
         {
+            bankInfo = new BankInfo
+            {
+                ReenterOTP = false,
+                SelectAccount = false,
+                RenewableOtp = true
+            };
             string path = AppDomain.CurrentDomain.BaseDirectory + @"\Banks\Scripts\" + GetType().Name + ".js";
             Script = File.ReadAllText(path);
         }
@@ -53,6 +59,7 @@ namespace SeleniumTest.Banks
                 throw new NotImplementedException();
             }
             if (result.HasError || !result.IsComplete) throw new Exception("Transfer failed");
+            param.TransferOK = true;
         }
 
         protected override void Login()

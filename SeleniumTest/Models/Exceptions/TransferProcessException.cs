@@ -7,9 +7,10 @@ namespace BankAPI.Exceptions
 {
     public class TransferProcessException : Exception
     {
-        public TransferProcessException(string message) : base("转账过程有误： " + message)
+        public int ErrorCode;
+        public TransferProcessException(string message,int ErrorCode = 402) : base("转账过程有误： " + message)
         {
-
+            this.ErrorCode = ErrorCode;
         }
     }
 }

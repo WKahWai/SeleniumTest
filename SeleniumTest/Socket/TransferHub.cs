@@ -90,16 +90,12 @@ namespace SeleniumTest.Socket
                                 item.Clients.Client(item.ConnectionId).Receive(JsonResponse.success(null, "你的转账正在进行中"));
                             }
                             queue.Remove(queue[i]);
-                            Task.Run(() => item.Bank.Start()).ContinueWith(async (task) =>
+                            Task.Run(() => item.Bank.Start()).ContinueWith(async (response) =>
                             {
-                                TransactionResult result = await task;
-                                item.Clients.Client(item.ConnectionId).Receive(result.Code != 0 ? JsonResponse.failed(result.Message ?? "Have error occurred", result, result.Code) : JsonResponse.success(result, result.Message ?? "Request success"));
+                                item.Clients.Client(item.ConnectionId).Receive(await response);
                                 //Thread.Sleep(3000);
-                                Task.Run(() => item.Bank.Dispose()).ContinueWith(async (t) =>
-                                {
-                                    await t;
-                                    ProcessingList.Remove(item);
-                                });
+                                item.Bank.Dispose();
+                                ProcessingList.Remove(item);
                             });
                         }
                     }
