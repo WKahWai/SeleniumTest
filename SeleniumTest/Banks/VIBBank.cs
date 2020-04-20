@@ -161,7 +161,7 @@ namespace SeleniumTest.Banks
                 return new Tuple<string, bool>(errorBox?.Text, errorBox == null);
             }, bankInfo.ReenterOTP);
             if (result.HasError) throw new Exception("System have error during process the receive OTP");
-            if (!result.IsComplete) throw new TransferProcessException("等待短信验证输入超时");
+            if (!result.IsComplete) throw new TransferProcessException("等待短信验证输入超时", 406);
         }
 
         protected override void RenewOTP()
@@ -254,7 +254,7 @@ namespace SeleniumTest.Banks
             driver.ToChromeDriver().ExecuteScript("$('div.selectOption[val^=\"" + selectedAccount + "\"]')[0].click();");
 
             var balance = 0;
-            if ((balance - param.Amount) < 0) throw new TransferProcessException("Insufficient amount");
+            if ((balance - param.Amount) < 0) throw new TransferProcessException("Insufficient amount", 405);
 
             return list;
         }

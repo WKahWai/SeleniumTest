@@ -47,7 +47,7 @@ namespace BankAPI.Model
                 IsComplete = false,
                 HasError = false,
                 Message = "执行中的任务超时，系统强制终止任务",
-                ForceStop = false
+                ForceStop = false,
             };
         }
 
@@ -58,7 +58,7 @@ namespace BankAPI.Model
                 IsComplete = false,
                 HasError = true,
                 Message = message,
-                ForceStop = false
+                ForceStop = false,
             };
         }
 
@@ -69,7 +69,7 @@ namespace BankAPI.Model
                 IsComplete = true,
                 HasError = false,
                 Message = "任务完成",
-                ForceStop = false
+                ForceStop = false,
             };
         }
 
@@ -80,7 +80,7 @@ namespace BankAPI.Model
                 IsComplete = false,
                 HasError = false,
                 Message = "任务被终止",
-                ForceStop = true
+                ForceStop = true,
             };
         }
     }

@@ -7,3 +7,16 @@
         }
     }
 }
+
+function getUserAccounts() {
+    var items = [];
+    var options = $('.x-combo-list-inner').find('div');
+    for (i = 0; i < options.length; i++) {
+        if (i != 0) items.push($(options[i]).text());
+    }
+    return items;
+}
+
+function test() {
+    return "test";
+}

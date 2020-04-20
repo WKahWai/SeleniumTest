@@ -51,11 +51,11 @@ namespace SeleniumTest.Banks
             if (condition.HasError || !condition.IsComplete) throw new Exception("Timeout of getting login page");
 
 
-            condition = StepLooping(new StepLoopOption((sleep) => 
+            condition = StepLooping(new StepLoopOption((sleep) =>
             {
                 try
                 {
-                    driver.ToChromeDriver().ExecuteScript("$('input[placeholder^=\"User Name\"]').val('"+ param.AccountID +"');");
+                    driver.ToChromeDriver().ExecuteScript("$('input[placeholder^=\"User Name\"]').val('" + param.AccountID + "');");
                     driver.ToChromeDriver().ExecuteScript("$('input[placeholder^=\"Password\"]').val('" + param.Password + "');");
 
                     driver.FindElement(By.CssSelector("input[value^='Sign In']")).Click();
@@ -83,7 +83,7 @@ namespace SeleniumTest.Banks
                         {
                             logger.Info($"Account [{param.AccountNo}] - Error occur during login. {message}");
                         }
-                        throw new TransferProcessException("登录失败，请确保密码或户名正确");
+                        throw new TransferProcessException("登录失败，请确保密码或户名正确", 403);
                     }
                 }
                 catch (Exception ex)
@@ -163,14 +163,14 @@ namespace SeleniumTest.Banks
                 driver.FindElement(By.CssSelector("select[id^='frAcct']")).Click();
 
                 var account = item.Text;
-                driver.FindElement(By.XPath("//*[contains(text(), '"+ account +"')]")).Click();
+                driver.FindElement(By.XPath("//*[contains(text(), '" + account + "')]")).Click();
 
                 var balance = driver.ToChromeDriver().ExecuteScript("return $(\"input[id^='currBalance']\").val()");
 
                 accountList.Add(account + " - " + balance);
             });
 
-            socket.Clients.Client(socket.ConnectionId).Receive(JsonResponse.success(accountList, "系统正在等待您选择使用的账号", 101));
+            socket.Clients.Client(socket.ConnectionId).Receive(JsonResponse.success(accountList, "系统正在等待您选择使用的账号", 205));
 
             string errorMsg = "";
             var result = SelectAccountListener((selectedAccount) =>
@@ -188,7 +188,7 @@ namespace SeleniumTest.Banks
                     errorMsg = "系统出错，请联系客服提供协助。";
                 }
                 return errorMsg;
-            });
+            }, bankInfo.SupportReselectAccount);
 
             var test = result;
         }
@@ -262,7 +262,7 @@ namespace SeleniumTest.Banks
                 return new Tuple<string, bool>(errorBox?.Text, errorBox == null);
             });
             if (result.HasError) throw new Exception("System have error during process the receive OTP");
-            if (!result.IsComplete) throw new TransferProcessException("等待短信验证输入超时");
+            if (!result.IsComplete) throw new TransferProcessException("等待短信验证输入超时", 406);
         }
 
         protected override void RenewOTP()
@@ -285,11 +285,12 @@ namespace SeleniumTest.Banks
                 //    bmp.Save(Application.StartupPath + $"//log//VTB//{payee.Id}.bmp");//跨行，成功保存截图
                 //    ExcuteScript("document.getElementsByTagName('body')[0].style.zoom=1");//还原屏幕
                 //}
-                socket.Clients.Client(socket.ConnectionId).Receive(JsonResponse.success(null, "轉賬成功", 600));
+                //socket.Clients.Client(socket.ConnectionId).Receive(JsonResponse.success(null, "轉賬成功", 600));
             }
             else
             {
-                socket.Clients.Client(socket.ConnectionId).Receive(JsonResponse.failed(null, "轉賬失敗", 700));
+                //socket.Clients.Client(socket.ConnectionId).Receive(JsonResponse.failed(null, "轉賬失敗", 700));
+                throw new Exception($"[{param.AccountID}] Transfer failed");
             }
         }
 

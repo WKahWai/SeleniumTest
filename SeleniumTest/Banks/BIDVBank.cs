@@ -43,7 +43,7 @@ namespace SeleniumTest.Banks
                     sleep();
                     var time = DateTime.Now.ToString("dd/MM/yyyy");
                     return ((driver.PageSource.Contains("Số tham chiếu") || driver.PageSource.ToLower().Contains("reference number")) && driver.PageSource.Contains("class=\" CONF_OD_SUCCESS_IMG\"") && driver.PageSource.Contains("class=\" CONF_OD_FAILURE_IMG x-hide-display\""));
-            })
+                })
                 {
                     MaxLoop = 15,
                     SleepInterval = 1
@@ -94,7 +94,7 @@ namespace SeleniumTest.Banks
                 else
                 {
                     string error = (string)driver.ToChromeDriver().ExecuteScript("return $('#errid1').text();");
-                    if (!string.IsNullOrEmpty(error)) throw new TransferProcessException(error);
+                    if (!string.IsNullOrEmpty(error)) throw new TransferProcessException(error, 403);
                 }
                 return false;
             })
@@ -190,7 +190,7 @@ namespace SeleniumTest.Banks
                 if (!IsOTPSubmit)
                 {
                     if (OTPResult.HasError) throw new Exception($"[{param.AccountNo}] - Fail during OTP request. EX :  {OTPResult.Message}");
-                    else if (!OTPResult.IsComplete) throw new TransferProcessException("等待短信验证码超时");
+                    else if (!OTPResult.IsComplete) throw new TransferProcessException("等待短信验证码超时", 406);
                     //todo
                 }
             }
@@ -231,12 +231,12 @@ namespace SeleniumTest.Banks
                 field.SendKeys(param.RecipientAccount);
                 driver.ToChromeDriver().ExecuteScript("$('img')[2].click()");
                 Thread.Sleep(1000);
-                if (driver.PageSource.Contains("The Account Number you have entered is Invalid")) throw new TransferProcessException("The Account Number you have entered is Invalid");
+                if (driver.PageSource.Contains("The Account Number you have entered is Invalid")) throw new Exception("The Account Number you have entered is Invalid");
                 var rname = driver.FindElement(By.Name("BENN4_BENENAME"));
-                if (!string.IsNullOrEmpty(param.RecipientName))
-                {
-                    if (!rname.Text.ToLower().Equals(param.RecipientName.ToLower())) throw new TransferProcessException("The recipient name is not same as the name that you enter");
-                }
+                //if (!string.IsNullOrEmpty(param.RecipientName))
+                //{
+                //    if (!rname.Text.ToLower().Equals(param.RecipientName.ToLower())) throw new TransferProcessException("The recipient name is not same as the name that you enter");
+                //}
                 param.RecipientName = rname.Text.ToUpper();
                 driver.ToChromeDriver().ExecuteScript("$('button')[20].click()");
                 result = StepLooping(new StepLoopOption((sleep) =>
@@ -270,22 +270,22 @@ namespace SeleniumTest.Banks
 
         private void SelectUserAccount()
         {
-            var result = StepLooping(new StepLoopOption((sleep) =>
+            Thread.Sleep(2000);
+            driver.ToChromeDriver().ExecuteScript("$('img')[4].click();");
+            Thread.Sleep(1000);
+            var accounts = driver.ToChromeDriver().ExecuteScript(Script + "return getUserAccounts()");
+            socket.Clients.Client(socket.ConnectionId).Receive(JsonResponse.success(accounts, "系统正在等待您选择使用的账号", 205));
+            string errorMsg = "";
+            var result = SelectAccountListener((selectedAccount) =>
             {
-                sleep();
-                driver.ToChromeDriver().ExecuteScript("$('img')[4].click();");
-                Thread.Sleep(500);
+                param.AccountNo = selectedAccount.Trim();
                 driver.ToChromeDriver().ExecuteScript(Script + $"selectUserAccount({ param.AccountNo})");
-                sleep();
+                Thread.Sleep(2000);
                 bool isSelected = (bool)driver.ToChromeDriver().ExecuteScript($"return $('input[type=hidden]').eq(2).val() == {param.AccountNo};");
-                return isSelected;
-            })
-            {
-                MaxLoop = 2,
-                SleepInterval = 2
-            });
+                return isSelected ? errorMsg : "Unable to selected user account";
+            }, bankInfo.SupportReselectAccount);
 
-            if (result.HasError || !result.IsComplete) throw new Exception("Unable to select user account");
+            if (result.HasError || !result.IsComplete) throw new Exception(result.Message ?? "Unable to select user account");
         }
 
         private StepLoopResult SelectTransferType(string key, string value)

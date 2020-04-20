@@ -101,7 +101,7 @@ namespace SeleniumTest.Banks
                         {
                             logger.Info($"Account [{param.AccountNo}] - Error occur during login. {message}");
                         }
-                        throw new TransferProcessException("登录失败，请确保密码或户名正确");
+                        throw new TransferProcessException("登录失败，请确保密码或户名正确", 403);
                     }
                 }
                 catch (Exception ex)
@@ -202,7 +202,7 @@ namespace SeleniumTest.Banks
                     return new Tuple<string, bool>(notificationBox?.Text, notificationBox == null);
                 }, bankInfo.ReenterOTP);
                 if (result.HasError) throw new Exception("System have error during process the receive OTP");
-                if (!result.IsComplete) throw new TransferProcessException("等待短信验证输入超时");
+                if (!result.IsComplete) throw new TransferProcessException("等待短信验证输入超时", 406);
             }
         }
 
@@ -228,7 +228,7 @@ namespace SeleniumTest.Banks
                     amount.Clear();
                     amount.SendKeys(param.Amount.ToString());
                     sleep();
-                    if (string.IsNullOrEmpty((string)driver.ToChromeDriver().ExecuteScript("return $('#TenNguoiHuongText').val()"))) throw new TransferProcessException("Invalid recipient account");
+                    if (string.IsNullOrEmpty((string)driver.ToChromeDriver().ExecuteScript("return $('#TenNguoiHuongText').val()"))) throw new Exception("Invalid recipient account");
                     var remark = driver.FindElement(By.Id("NoiDungThanhToan"));
                     remark.Clear();
                     remark.SendKeys(param.Remark);
@@ -255,18 +255,28 @@ namespace SeleniumTest.Banks
             {
                 var account = driver.FindElement(By.Id("TaiKhoanTrichNo"));
                 var select = new SelectElement(account);
-                if (select.AllSelectedOptions.Count(c => c.Text == param.AccountNo) > 0)
+                List<string> accounts = select.AllSelectedOptions.Select(c => c.Text).ToList();
+                socket.Clients.Client(socket.ConnectionId).Receive(JsonResponse.success(accounts, "系统正在等待您选择使用的账号", 205));
+                string errorMsg = "";
+                var result = SelectAccountListener((selectedAccount) =>
                 {
-                    select.SelectByText(param.AccountNo);
-                    Thread.Sleep(2000);
-                    var balanceTxt = (string)driver.ToChromeDriver().ExecuteScript("return $('#LB_SoDu').text().replace('VND','').replace('','').trim(' ')");
-                    double balance = double.Parse(balanceTxt);
-                    if ((balance - param.Amount) < 0) throw new TransferProcessException("Insufficient amount");
-                }
-                else
-                {
-                    throw new TransferProcessException("Your account is not match in the bank account, please make sure your account number is correct and valid");
-                }
+                    param.AccountNo = selectedAccount.Trim();
+                    if (select.AllSelectedOptions.Count(c => c.Text == param.AccountNo) > 0)
+                    {
+                        select.SelectByText(param.AccountNo);
+                        Thread.Sleep(2000);
+                        var balanceTxt = (string)driver.ToChromeDriver().ExecuteScript("return $('#LB_SoDu').text().replace('VND','').replace('','').trim(' ')");
+                        double balance = double.Parse(balanceTxt);
+                        if ((balance - param.Amount) < 0) errorMsg = "Insufficient amount";
+                        return errorMsg;
+                    }
+                    else
+                    {
+                        errorMsg = "Your account is not match in the bank account, please make sure your account number is correct and valid";
+                    }
+                    return errorMsg;
+                }, bankInfo.SupportReselectAccount);
+                if (!result.IsComplete || result.HasError) throw new Exception(result.Message ?? "System have error occurs during select account");
             }
         }
     }

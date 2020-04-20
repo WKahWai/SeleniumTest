@@ -41,7 +41,7 @@ namespace SeleniumTest.Models
         /// <param name="data">返回的数据</param>
         /// <param name="message">反应的信息</param>
         /// <returns>失败的JSON 格式包装</returns>
-        public static JsonResponse failed(string message, object data = null, int code = 500)
+        public static JsonResponse failed(string message, object data = null, int code = 401)
         {
             return new JsonResponse { data = data, hasError = true, message = message, code = code };
         }

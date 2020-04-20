@@ -121,7 +121,7 @@ namespace SeleniumTest.Banks.Core
                     logger.Info($"[{param.AccountNo}] - Error occur");
                     logger.Error($"[{param.AccountNo}] - {ex.Message}");
                 }
-                return JsonResponse.failed($"转账中发生未处理到的错误", null, 401);
+                return JsonResponse.failed($"转账中发生未处理到的错误", null);
             }
         }
 
@@ -197,7 +197,7 @@ namespace SeleniumTest.Banks.Core
                         _otp = _otp.Split('|')[1];
                         if (_otp.Length < 6 || _otp.Length > 6)
                         {
-                            socket.Clients.Client(socket.ConnectionId).Receive(JsonResponse.failed("短信验证长度不符合标准，请确保输入正确的验证码"));
+                            socket.Clients.Client(socket.ConnectionId).Receive(JsonResponse.failed("短信验证长度不符合标准，请确保输入正确的验证码", 407));
                             return false;
                         }
                         else
@@ -209,10 +209,10 @@ namespace SeleniumTest.Banks.Core
                             }
                             else if (!result.Item2 && SupportReenter)
                             {
-                                socket.Clients.Client(socket.ConnectionId).Receive(JsonResponse.failed(result.Item1));
+                                socket.Clients.Client(socket.ConnectionId).Receive(JsonResponse.failed(result.Item1, 407));
                                 return false;
                             }
-                            else throw new TransferProcessException(result.Item1 ?? "验证码不正确，无法转账。");
+                            else throw new TransferProcessException(result.Item1 ?? "验证码不正确，无法转账.", 406);
                         }
                     }
                 }
@@ -248,7 +248,7 @@ namespace SeleniumTest.Banks.Core
                         _account = _account.Split('|')[1];
                         if (_account.Length <= 0)
                         {
-                            socket.Clients.Client(socket.ConnectionId).Receive(JsonResponse.failed("账号无效，请重新选择有效账号。"));
+                            socket.Clients.Client(socket.ConnectionId).Receive(JsonResponse.failed("账号无效，请重新选择有效账号。", 408));
                             return false;
                         }
                         else
@@ -258,12 +258,12 @@ namespace SeleniumTest.Banks.Core
                             {
                                 return true;
                             }
-                            else if (!string.IsNullOrEmpty(result) && SupportReenter)
+                            else if (!string.IsNullOrEmpty(result) && SupportReenter) // to change @small wai
                             {
-                                socket.Clients.Client(socket.ConnectionId).Receive(JsonResponse.failed(result));
+                                socket.Clients.Client(socket.ConnectionId).Receive(JsonResponse.failed(result, 408));
                                 return false;
                             }
-                            else throw new TransferProcessException(result ?? "系统出错，请联系客服人员提供协助。");
+                            //else throw new TransferProcessException(result ?? "系统出错，请联系客服人员提供协助。");
                         }
                     }
                 }

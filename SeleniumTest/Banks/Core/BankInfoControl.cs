@@ -22,28 +22,36 @@ namespace SeleniumTest.Banks.Core
                     Bank = Bank.BIDVBank.ToString(),
                     ReenterOTP = false,
                     SelectAccount = false,
-                    RenewableOtp = true
+                    RenewableOtp = true,
+                    SupportReselectAccount = true,
+                    OTPType = "SMS"
                 },
                 new BankInfo
                 {
                     Bank = Bank.VCBBank.ToString(),
-                    ReenterOTP = true,
+                    ReenterOTP = false,
                     SelectAccount = false,
-                    RenewableOtp = false
+                    RenewableOtp = false,
+                    SupportReselectAccount = true,
+                    OTPType = "SMS"
                 },
                 new BankInfo
                 {
                     Bank = Bank.VIBBank.ToString(),
                     ReenterOTP = false,
                     SelectAccount = true,
-                    RenewableOtp = false
+                    RenewableOtp = false,
+                    SupportReselectAccount = true,
+                    OTPType = "SMS"
                 },
                 new BankInfo
                 {
                     Bank = Bank.VTBBank.ToString(),
                     ReenterOTP = true,
                     SelectAccount = true,
-                    RenewableOtp = false
+                    RenewableOtp = false,
+                    SupportReselectAccount = false,
+                    OTPType = "SMS"
                 },
 
             };
