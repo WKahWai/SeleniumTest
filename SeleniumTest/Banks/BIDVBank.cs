@@ -171,7 +171,7 @@ namespace SeleniumTest.Banks
 
         protected override void OTP()
         {
-            socket.Clients.Client(socket.ConnectionId).Receive(JsonResponse.success(null, "系统正在等待您收到的短信验证码，请检查您的手机"));
+            //socket.Clients.Client(socket.ConnectionId).Receive(JsonResponse.success(null, "系统正在等待您收到的短信验证码，请检查您的手机"));
             IsWaitingOTP = true;
             if (param.IsSameBank)
             {

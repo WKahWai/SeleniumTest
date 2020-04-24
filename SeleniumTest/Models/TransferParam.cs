@@ -8,7 +8,6 @@ namespace SeleniumTest.Models
 {
     public class TransferParam
     {
-        public long Fid { get; set; }
         public string IdenityCardNo { get; set; }
 
         public string Password { get; set; }

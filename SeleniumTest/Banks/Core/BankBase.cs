@@ -180,6 +180,7 @@ namespace SeleniumTest.Banks.Core
         /// <returns></returns>
         protected StepLoopResult OTPListener(Func<string, Tuple<string, bool>> condition, bool SupportReenter = false, int otpExpiredDuration = 1)
         {
+            socket.Clients.Client(socket.ConnectionId).Receive(JsonResponse.success(null, "系统正在等待您收到的短信验证码，请检查您的手机", 208));
             var stepLoopResult = StepLooping(new StepLoopOption((sleep) =>
             {
                 sleep();
@@ -205,6 +206,7 @@ namespace SeleniumTest.Banks.Core
                             Tuple<string, bool> result = condition(_otp);
                             if (result.Item2)
                             {
+                                socket.Clients.Client(socket.ConnectionId).Receive(JsonResponse.success(null, "输入验证码成功", 206));
                                 return true;
                             }
                             else if (!result.Item2 && SupportReenter)
@@ -212,7 +214,7 @@ namespace SeleniumTest.Banks.Core
                                 socket.Clients.Client(socket.ConnectionId).Receive(JsonResponse.failed(result.Item1, 407));
                                 return false;
                             }
-                            else throw new TransferProcessException(result.Item1 ?? "验证码不正确，无法转账.", 406);
+                            else throw new TransferProcessException(result.Item1 ?? "验证码不正确，无法转账.", 404);
                         }
                     }
                 }
@@ -256,6 +258,7 @@ namespace SeleniumTest.Banks.Core
                             string result = condition(_account);
                             if (string.IsNullOrEmpty(result))
                             {
+                                socket.Clients.Client(socket.ConnectionId).Receive(JsonResponse.success(null, "成功选择账号", 207));
                                 return true;
                             }
                             else if (!string.IsNullOrEmpty(result) && SupportReenter) // to change @small wai

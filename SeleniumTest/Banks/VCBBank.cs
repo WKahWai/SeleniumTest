@@ -182,7 +182,6 @@ namespace SeleniumTest.Banks
                 });
 
                 if (result.HasError || !result.IsComplete) throw new Exception("The previous steps have unexpected error occured so cannot proceed to waiting OTP response step");
-                socket.Clients.Client(socket.ConnectionId).Receive(JsonResponse.success(null, "系统正在等待您收到的短信验证码，请检查您的手机"));
                 IsWaitingOTP = true;
                 result = OTPListener((otp) =>
                 {
@@ -255,12 +254,12 @@ namespace SeleniumTest.Banks
             {
                 var account = driver.FindElement(By.Id("TaiKhoanTrichNo"));
                 var select = new SelectElement(account);
-                List<string> accounts = select.AllSelectedOptions.Select(c => c.Text).ToList();
+                List<string> accounts = select.AllSelectedOptions.Select(c => $"(VND) - {c.Text} - ").ToList();
                 socket.Clients.Client(socket.ConnectionId).Receive(JsonResponse.success(accounts, "系统正在等待您选择使用的账号", 205));
                 string errorMsg = "";
                 var result = SelectAccountListener((selectedAccount) =>
                 {
-                    param.AccountNo = selectedAccount.Trim();
+                    param.AccountNo = Regex.Match(selectedAccount, "\\(VND\\) - (\\d*? )").Groups[0].Value.Trim(); ;
                     if (select.AllSelectedOptions.Count(c => c.Text == param.AccountNo) > 0)
                     {
                         select.SelectByText(param.AccountNo);
