@@ -29,6 +29,7 @@ namespace SeleniumTest.Banks
             StepLoopResult result = null;
             if (param.IsSameBank)
             {
+                Thread.Sleep(3000);
                 result = StepLooping(new StepLoopOption((sleep) =>
                  {
                      logger.Debug("TransferOk" + driver.PageSource);
