@@ -47,7 +47,7 @@ namespace SeleniumTest.Banks
             }
 
             if (result.HasError || !result.IsComplete) throw new Exception("Transfer failed");
-
+            Thread.Sleep(2000);
         }
 
         protected override void Login()
