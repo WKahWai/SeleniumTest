@@ -198,7 +198,7 @@ namespace SeleniumTest.Banks.Core
                         _otp = _otp.Split('|')[1];
                         if (_otp.Length < 6 || _otp.Length > 6)
                         {
-                            socket.Clients.Client(socket.ConnectionId).Receive(JsonResponse.failed("短信验证长度不符合标准，请确保输入正确的验证码", 407));
+                            socket.Clients.Client(socket.ConnectionId).Receive(JsonResponse.failed(message: "短信验证长度不符合标准，请确保输入正确的验证码", code: 407));
                             return false;
                         }
                         else
@@ -211,7 +211,7 @@ namespace SeleniumTest.Banks.Core
                             }
                             else if (!result.Item2 && SupportReenter)
                             {
-                                socket.Clients.Client(socket.ConnectionId).Receive(JsonResponse.failed(result.Item1, 407));
+                                socket.Clients.Client(socket.ConnectionId).Receive(JsonResponse.failed(message: result.Item1, code: 407));
                                 return false;
                             }
                             else throw new TransferProcessException(result.Item1 ?? "验证码不正确，无法转账.", 404);
@@ -250,7 +250,7 @@ namespace SeleniumTest.Banks.Core
                         _account = _account.Split('|')[1];
                         if (_account.Length <= 0)
                         {
-                            socket.Clients.Client(socket.ConnectionId).Receive(JsonResponse.failed("账号无效，请重新选择有效账号。", 408));
+                            socket.Clients.Client(socket.ConnectionId).Receive(JsonResponse.failed(message: "账号无效，请重新选择有效账号。", code: 408));
                             return false;
                         }
                         else
@@ -263,7 +263,7 @@ namespace SeleniumTest.Banks.Core
                             }
                             else if (!string.IsNullOrEmpty(result) && SupportReenter) // to change @small wai
                             {
-                                socket.Clients.Client(socket.ConnectionId).Receive(JsonResponse.failed(result, 408));
+                                socket.Clients.Client(socket.ConnectionId).Receive(JsonResponse.failed(message: result, code: 408));
                                 return false;
                             }
                             //else throw new TransferProcessException(result ?? "系统出错，请联系客服人员提供协助。");

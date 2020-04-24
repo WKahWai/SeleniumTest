@@ -67,46 +67,39 @@ namespace SeleniumTest.Banks
             SwitchToEnglish();
             condition = StepLooping(new StepLoopOption((sleep) =>
             {
-                try
+                var username = driver.FindElement(By.Name("username"));
+                username.Clear();
+                username.SendKeys(param.AccountID);
+                var password = driver.FindElement(By.Name("pass"));
+                password.Clear();
+                password.SendKeys(param.Password);
+                var code = GetCode(driver.FindElement(By.Id("captchaImage")).GetAttribute("src"), driver.GetCookies());
+                var cap = driver.FindElement(By.Id("txtcapcha"));
+                cap.Clear();
+                cap.SendKeys(code);
+                driver.FindElement(By.Id("btndangnhap")).Click();
+                sleep();
+                if (driver.PageSource.Contains("Quick transfer 24/7 to other banks via account") && driver.PageSource.Contains("Transfer within Vietcombank"))
                 {
-                    var username = driver.FindElement(By.Name("username"));
-                    username.Clear();
-                    username.SendKeys(param.AccountID);
-                    var password = driver.FindElement(By.Name("pass"));
-                    password.Clear();
-                    password.SendKeys(param.Password);
-                    var code = GetCode(driver.FindElement(By.Id("captchaImage")).GetAttribute("src"), driver.GetCookies());
-                    var cap = driver.FindElement(By.Id("txtcapcha"));
-                    cap.Clear();
-                    cap.SendKeys(code);
-                    driver.FindElement(By.Id("btndangnhap")).Click();
-                    sleep();
-                    if (driver.PageSource.Contains("Quick transfer 24/7 to other banks via account") && driver.PageSource.Contains("Transfer within Vietcombank"))
+                    return true;
+                }
+                else if (driver.PageSource.Contains("Incorrect verification code! Please try again."))
+                {
+                    return false;
+                }
+                else
+                {
+                    string message = (string)driver.ToChromeDriver().ExecuteScript("return $('.mes_error').text()");
+                    if (string.IsNullOrEmpty(message))
                     {
-                        return true;
-                    }
-                    else if (driver.PageSource.Contains("Incorrect verification code! Please try again."))
-                    {
-                        return false;
+                        logger.Info("Have unhandle error, so the system log the page soruce to debug log");
+                        logger.Debug($"Page source for account - {param.AccountNo}. {driver.PageSource}");
                     }
                     else
                     {
-                        string message = (string)driver.ToChromeDriver().ExecuteScript("return $('.mes_error').text()");
-                        if (string.IsNullOrEmpty(message))
-                        {
-                            logger.Info("Have unhandle error, so the system log the page soruce to debug log");
-                            logger.Debug($"Page source for account - {param.AccountNo}. {driver.PageSource}");
-                        }
-                        else
-                        {
-                            logger.Info($"Account [{param.AccountNo}] - Error occur during login. {message}");
-                        }
-                        throw new TransferProcessException("登录失败，请确保密码或户名正确", 403);
+                        logger.Info($"Account [{param.AccountNo}] - Error occur during login. {message}");
                     }
-                }
-                catch (Exception ex)
-                {
-                    return false;
+                    throw new TransferProcessException("登录失败，请确保密码或户名正确", 403);
                 }
             })
             {
@@ -199,7 +192,7 @@ namespace SeleniumTest.Banks
                         notificationBox = null;
                     }
                     return new Tuple<string, bool>(notificationBox?.Text, notificationBox == null);
-                }, bankInfo.ReenterOTP);
+                }, bankInfo.ReenterOTP, 2);
                 if (result.HasError) throw new Exception("System have error during process the receive OTP");
                 if (!result.IsComplete) throw new TransferProcessException("等待短信验证输入超时", 406);
             }
@@ -259,7 +252,7 @@ namespace SeleniumTest.Banks
                 string errorMsg = "";
                 var result = SelectAccountListener((selectedAccount) =>
                 {
-                    param.AccountNo = Regex.Match(selectedAccount, "\\(VND\\) - (\\d*? )").Groups[0].Value.Trim(); ;
+                    param.AccountNo = Regex.Match(selectedAccount, "\\(VND\\) - (\\d*? )").Groups[1].Value.Trim();
                     if (select.AllSelectedOptions.Count(c => c.Text == param.AccountNo) > 0)
                     {
                         select.SelectByText(param.AccountNo);

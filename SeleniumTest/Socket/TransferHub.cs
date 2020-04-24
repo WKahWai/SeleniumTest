@@ -17,12 +17,22 @@ namespace SeleniumTest.Socket
         public static List<SocketItem> ProcessingList = new List<SocketItem>();
         public static List<SocketItem> queue = new List<SocketItem>();
         public static List<string> EmergencySkipQueueTerminationList = new List<string>();
-        public Logger logger = LogManager.GetCurrentClassLogger();
+        public static Logger logger = LogManager.GetCurrentClassLogger();
 
 
         static TransferHub()
         {
             Task.Run(() => Deque());
+        }
+
+        public override Task OnConnected()
+        {
+            //Clients.Client(Context.ConnectionId).Receive(JsonResponse.success(new List<string>
+            //{
+            //      "(VND) - 43753453453 - ",
+            //      "(VND) - 5686345234324 - ",
+            //}, "正在处理的转账已被强制停止", 205));
+            return base.OnConnected();
         }
 
         public override Task OnDisconnected(bool stopCalled)
@@ -84,19 +94,29 @@ namespace SeleniumTest.Socket
                         lock (queue)
                         {
                             try { item = queue[index]; } catch { break; }
-                            item.Bank = BankBase.GetBank(queue[index]);
-                            if (EmergencySkipQueueTerminationList.Where(c => c.Equals(item.ConnectionId)).Count() != 0) break;
-                            ProcessingList.Add(item);
-                            item.Clients.Client(item.ConnectionId).Receive(JsonResponse.success(null, "你的转账正在进行中"));
+                            try
+                            {
+                                item.Bank = BankBase.GetBank(queue[index]);
+                                if (EmergencySkipQueueTerminationList.Where(c => c.Equals(item.ConnectionId)).Count() != 0) break;
+                                ProcessingList.Add(item);
+                                item.Clients.Client(item.ConnectionId).Receive(JsonResponse.success(null, "你的转账正在进行中"));
+                            }
+                            catch (Exception ex)
+                            {
+                                logger.Error($"添加连队去处理中的列队异常. Ex - {ex.Message}");
+                            }
                         }
                         queue.Remove(queue[index]);
-                        Task.Run(() => item.Bank.Start()).ContinueWith(async (response) =>
+                        if (item != null)
                         {
-                            item.Clients.Client(item.ConnectionId).Receive(await response);
-                            //Thread.Sleep(3000);
-                            item.Bank.Dispose();
-                            ProcessingList.Remove(item);
-                        });
+                            Task.Run(() => item.Bank.Start()).ContinueWith(async (response) =>
+                            {
+                                item.Clients.Client(item.ConnectionId).Receive(await response);
+                                //Thread.Sleep(3000);
+                                item.Bank.Dispose();
+                                ProcessingList.Remove(item);
+                            });
+                        }
 
                     }
                 }
@@ -121,7 +141,7 @@ namespace SeleniumTest.Socket
             catch (Exception ex)
             {
                 logger.Error($"Error occur during Hub Start method. {data}. Exception: {ex.Message}");
-                Clients.Client(Context.ConnectionId).Receive(JsonResponse.failed("开始初始化列队时出现错误"));
+                Clients.Client(Context.ConnectionId).Receive(JsonResponse.failed("开始初始化列队时出现错误", code: 402));
             }
         }
 

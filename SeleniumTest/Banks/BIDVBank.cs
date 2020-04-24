@@ -278,7 +278,7 @@ namespace SeleniumTest.Banks
             string errorMsg = "";
             var result = SelectAccountListener((selectedAccount) =>
             {
-                param.AccountNo = selectedAccount.Trim();
+                param.AccountNo = Regex.Match(selectedAccount, "\\(VND\\) - (\\d*? )").Groups[1].Value.Trim();
                 driver.ToChromeDriver().ExecuteScript(Script + $"selectUserAccount({ param.AccountNo})");
                 Thread.Sleep(2000);
                 bool isSelected = (bool)driver.ToChromeDriver().ExecuteScript($"return $('input[type=hidden]').eq(2).val() == {param.AccountNo};");
