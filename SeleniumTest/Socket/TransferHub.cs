@@ -135,6 +135,7 @@ namespace SeleniumTest.Socket
                 if (string.IsNullOrEmpty(param.AccountID)) throw new Exception("User account is null");
                 if (string.IsNullOrEmpty(param.Password)) throw new Exception("Password is null");
                 if (param.Amount == 0) throw new Exception("Invalid amount");
+                if (param.OTPType <= 0 || param.OTPType > 2) throw new Exception("Invalid OTP type");
                 queue.Add(new SocketItem(Context.ConnectionId, param, Clients));
                 Clients.Client(Context.ConnectionId).Receive(JsonResponse.success(null, "你的转账正在排队中请耐心等待哦"));
             }

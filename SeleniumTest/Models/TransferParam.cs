@@ -26,6 +26,11 @@ namespace SeleniumTest.Models
         public string RecipientAccount { get; set; }
         public string RecipientName { get; set; }
 
+        /// <summary>
+        /// 1 = sms 2 = smart otp
+        /// </summary>
+        public int OTPType { get; set; }
+
         public string Remark { get; set; }
 
         public double Amount { get; set; }

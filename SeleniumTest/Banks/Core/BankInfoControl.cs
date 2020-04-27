@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Web;
 
 namespace SeleniumTest.Banks.Core
@@ -20,11 +21,11 @@ namespace SeleniumTest.Banks.Core
                 new BankInfo
                 {
                     Bank = Bank.BIDVBank.ToString(),
-                    ReenterOTP = false,
+                    ReenterOTP = true,
                     SelectAccount = false,
                     RenewableOtp = true,
                     SupportReselectAccount = true,
-                    OTPType = "SMS"
+                    SupportedOTPType = new string[] {"SMS","SMART_OTP"}
                 },
                 new BankInfo
                 {
@@ -33,7 +34,7 @@ namespace SeleniumTest.Banks.Core
                     SelectAccount = false,
                     RenewableOtp = false,
                     SupportReselectAccount = true,
-                    OTPType = "SMS"
+                    SupportedOTPType = new string[] {"SMS","SMART_OTP"}
                 },
                 new BankInfo
                 {
@@ -42,7 +43,7 @@ namespace SeleniumTest.Banks.Core
                     SelectAccount = true,
                     RenewableOtp = false,
                     SupportReselectAccount = true,
-                    OTPType = "SMS"
+                    SupportedOTPType = new string[] {"SMS","SMART_OTP"}
                 },
                 new BankInfo
                 {
@@ -51,10 +52,22 @@ namespace SeleniumTest.Banks.Core
                     SelectAccount = true,
                     RenewableOtp = false,
                     SupportReselectAccount = false,
-                    OTPType = "SMS"
+                    SupportedOTPType = new string[] {"SMS","SMART_OTP"}
                 },
 
             };
         }
+
+        protected virtual void InputString(string str)
+        {
+            BankAction.InputString(str, 200);
+        }
+
+    }
+
+    public class BankAction
+    {
+        [DllImport("VHID.dll", EntryPoint = "InputString", CharSet = CharSet.Ansi, CallingConvention = CallingConvention.StdCall)]
+        public static extern int InputString(string str, uint interval);
     }
 }

@@ -9,7 +9,7 @@ namespace SeleniumTest.Models
     {
         public string Bank { get; set; }
 
-        public string OTPType { get; set; }
+        public string[] SupportedOTPType { get; set; }
 
         public bool RenewableOtp { get; set; }
         public bool SelectAccount { get; set; }

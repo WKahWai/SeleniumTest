@@ -62,6 +62,7 @@ namespace SeleniumTest.Banks.Core
 
         public BankBase(SocketItem item, DriverToUse driverType = DriverToUse.HTTP)
         {
+            logger.Debug("test");
             driver = new DriverFactory().Create(driverType);
             socket = item;
             param = item.param;
@@ -178,7 +179,7 @@ namespace SeleniumTest.Banks.Core
         /// <param name="SupportReenter">This allow the listner to know need to continue the loop for reenter otp</param>
         /// <param name="otpExpiredDuration">This value is use to control the loop times and it is in minute unit</param>
         /// <returns></returns>
-        protected StepLoopResult OTPListener(Func<string, Tuple<string, bool>> condition, bool SupportReenter = false, int otpExpiredDuration = 1)
+        protected StepLoopResult OTPListener(Func<string, Tuple<string, bool>> condition, bool SupportReenter = false, double otpExpiredDuration = 1)
         {
             socket.Clients.Client(socket.ConnectionId).Receive(JsonResponse.success(null, "系统正在等待您收到的短信验证码，请检查您的手机", 208));
             var stepLoopResult = StepLooping(new StepLoopOption((sleep) =>
@@ -221,7 +222,7 @@ namespace SeleniumTest.Banks.Core
                 return false;
             })
             {
-                MaxLoop = otpExpiredDuration * 60 / 3,
+                MaxLoop = Convert.ToInt32(Math.Ceiling(otpExpiredDuration * 60 / 3)),
                 SleepInterval = 3
             });
             IsWaitingOTP = false;
