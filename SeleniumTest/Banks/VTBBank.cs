@@ -273,25 +273,26 @@ namespace SeleniumTest.Banks
         protected override void CheckTransferStatus()
         {
             //throw new NotImplementedException();
-            Thread.Sleep(1000);
-            if (driver.PageSource.Contains("Transaction is sucessful") || driver.PageSource.Contains("Transaction is successful") || driver.PageSource.Contains("Giao dịch thành công") || (driver.PageSource.Contains("receipt-number") && driver.PageSource.Contains("breadcrumb-item active last")))
+            StepLoopResult result = null;
+            if (param.IsSameBank)
             {
-                //if (!IsSameBank)
-                //{
-                //    DefaultFrame();
-                //    ExcuteScript("document.getElementsByTagName('body')[0].style.zoom=0.8;");//缩小屏幕
-                //    ExcuteScript("window.scrollTo(0,180)");
-                //    var bmp = GetScreenSelenium();
-                //    bmp.Save(Application.StartupPath + $"//log//VTB//{payee.Id}.bmp");//跨行，成功保存截图
-                //    ExcuteScript("document.getElementsByTagName('body')[0].style.zoom=1");//还原屏幕
-                //}
-                //socket.Clients.Client(socket.ConnectionId).Receive(JsonResponse.success(null, "轉賬成功", 600));
+                result = StepLooping(new StepLoopOption((sleep) =>
+                {
+                    logger.Debug("TransferOk" + driver.PageSource);
+                    sleep();
+                    return driver.PageSource.Contains("Transaction is sucessful") || driver.PageSource.Contains("Transaction is successful") || driver.PageSource.Contains("Giao dịch thành công") || (driver.PageSource.Contains("receipt-number") && driver.PageSource.Contains("breadcrumb-item active last"));
+                })
+                {
+                    MaxLoop = 15,
+                    SleepInterval = 1
+                });
             }
             else
             {
-                //socket.Clients.Client(socket.ConnectionId).Receive(JsonResponse.failed(null, "轉賬失敗", 700));
-                throw new Exception($"[{param.AccountID}] Transfer failed");
+                throw new NotImplementedException();
             }
+
+            if (result.HasError || !result.IsComplete) throw new Exception("Transfer failed");
         }
 
         protected override void Logout()
