@@ -27,13 +27,16 @@ namespace SeleniumTest.Banks
 
         public BIDVBank(SocketItem item) : base(item, DriverToUse.Chrome)
         {
+#if DEBUG
             bankInfo = GetBankInfoByBank(Bank.BIDVBank);
+#endif
             string path = AppDomain.CurrentDomain.BaseDirectory + @"\Banks\Scripts\" + GetType().Name + ".js";
             Script = File.ReadAllText(path);
         }
 
         protected override void CheckTransferStatus()
         {
+            Thread.Sleep(3000);
             StepLoopResult result = null;
             if (param.IsSameBank)
             {
@@ -171,27 +174,52 @@ namespace SeleniumTest.Banks
 
         protected override void OTP()
         {
-            socket.Clients.Client(socket.ConnectionId).Receive(JsonResponse.success(null, "系统正在等待您收到的短信验证码，请检查您的手机"));
             IsWaitingOTP = true;
             if (param.IsSameBank)
             {
+                string btnId = "";
+                while (string.IsNullOrEmpty(btnId))
+                {
+                    btnId = new Regex("(<button type=\"button\" id=\"(?<id>[a-z0-9\\-]+)\" class=\" x-btn-text\">Submit</button>)").Match(driver.PageSource).Groups["id"].Value;
+                    Thread.Sleep(200);
+                }
+
+                if (param.OTPType == 2)//smart otp
+                {
+                    //renew the smart otp to avoid expired too fast
+                    var refNo = driver.ToChromeDriver().ExecuteScript("return $(\"input[name='']\")");
+                    driver.ToChromeDriver().ExecuteScript("$('button')[22].click()");
+                    Thread.Sleep(600);
+                    socket.Clients.Client(socket.ConnectionId).Receive(JsonResponse.success(null, "Otp reference success", 209));
+                }
+
                 OTPResult = OTPListener((otp) =>
                 {
+                    var submitBtn = driver.FindElement(By.Id(btnId));
                     var otpInput = driver.FindElement(By.Name("KEY_OTP"));
                     otpInput.Clear();
+                    otpInput.SendKeys(Keys.NumberPad0);
+                    otpInput.SendKeys(Keys.Backspace);
                     otpInput.SendKeys(otp);
-                    driver.ToChromeDriver().ExecuteScript("$('button')[24].click()");
+                    Thread.Sleep(1000);
+                    submitBtn.Click();
+                    //driver.ToChromeDriver().ExecuteScript("$('button')[24].click()");
                     Thread.Sleep(800);
                     IsOTPSubmit = true;
                     string invalidMessage = "OTP entered is incorrect. Please try again";
-                    return new Tuple<string, bool>(invalidMessage, driver.PageSource.Contains(invalidMessage));
-                });
+                    if (driver.PageSource.Contains("Please enter the OTP"))
+                    {
+                        return new Tuple<string, bool>("Please enter the OTP, OTP cannot be null", !driver.PageSource.Contains("Please enter the OTP"));
+                    }
+                    logger.Debug(driver.PageSource);
+                    return new Tuple<string, bool>(invalidMessage, !driver.PageSource.Contains(invalidMessage));
+                }, otpExpiredDuration: 3, SupportReenter: bankInfo.ReenterOTP);
                 if (OTPResult.ForceStop) RenewOTP();
                 if (!IsOTPSubmit)
                 {
                     if (OTPResult.HasError) throw new Exception($"[{param.AccountNo}] - Fail during OTP request. EX :  {OTPResult.Message}");
                     else if (!OTPResult.IsComplete) throw new TransferProcessException("等待短信验证码超时", 406);
-                    //todo
+                    //todo if need extra logic to verify is stuck in the same page
                 }
             }
             else
@@ -251,7 +279,7 @@ namespace SeleniumTest.Banks
                     remark.SendKeys(param.Remark);
                     driver.ToChromeDriver().ExecuteScript("$($('button')[22]).click()");
                     sleep();
-                    return driver.PageSource.Contains("Review Details");
+                    return driver.PageSource.Contains("Review Details") && driver.PageSource.Contains("Provide your Authentication Code to proceed");
                 })
                 {
                     MaxLoop = 10,
@@ -278,7 +306,7 @@ namespace SeleniumTest.Banks
             string errorMsg = "";
             var result = SelectAccountListener((selectedAccount) =>
             {
-                param.AccountNo = selectedAccount.Trim();
+                param.AccountNo = Regex.Match(selectedAccount, "\\(VND\\) - (\\d*? )").Groups[1].Value.Trim();
                 driver.ToChromeDriver().ExecuteScript(Script + $"selectUserAccount({ param.AccountNo})");
                 Thread.Sleep(2000);
                 bool isSelected = (bool)driver.ToChromeDriver().ExecuteScript($"return $('input[type=hidden]').eq(2).val() == {param.AccountNo};");

@@ -8,7 +8,6 @@ namespace SeleniumTest.Models
 {
     public class TransferParam
     {
-        public long Fid { get; set; }
         public string IdenityCardNo { get; set; }
 
         public string Password { get; set; }
@@ -27,9 +26,19 @@ namespace SeleniumTest.Models
         public string RecipientAccount { get; set; }
         public string RecipientName { get; set; }
 
+        /// <summary>
+        /// 1 = sms 2 = smart otp
+        /// </summary>
+        public int OTPType { get; set; }
+
         public string Remark { get; set; }
 
         public double Amount { get; set; }
+
+        /// <summary>
+        /// this is the bank info from the client side
+        /// </summary>
+        public string payload { get; set;}
         public string ToJson()
         {
             TransferParam param = new TransferParam

@@ -18,7 +18,9 @@ namespace SeleniumTest.Banks
     {
         public VIBBank(SocketItem item) : base(item, DriverToUse.Chrome)
         {
+#if DEBUG
             bankInfo = GetBankInfoByBank(Bank.VIBBank);
+#endif
         }
 
         protected override void CheckTransferStatus()
@@ -160,7 +162,7 @@ namespace SeleniumTest.Banks
             });
 
             if (result.HasError || !result.IsComplete) throw new Exception("The previous steps have unexpected error occured so cannot proceed to waiting OTP response step");
-            socket.Clients.Client(socket.ConnectionId).Receive(JsonResponse.success(null, "系统正在等待您收到的短信验证码，请检查您的手机"));
+            //socket.Clients.Client(socket.ConnectionId).Receive(JsonResponse.success(null, "系统正在等待您收到的短信验证码，请检查您的手机"));
             IsWaitingOTP = true;
             result = OTPListener((otp) =>
             {

@@ -9,6 +9,8 @@ using System.Threading;
 using System.Configuration;
 using System.Net.Http;
 using SeleniumTest.Models.Exceptions;
+using JZLibraries_Bank.Common;
+using Newtonsoft.Json;
 
 namespace SeleniumTest.Banks.Core
 {
@@ -17,7 +19,6 @@ namespace SeleniumTest.Banks.Core
         public Func<string> GetClientResponse = null;
         protected Logger logger = LogManager.GetCurrentClassLogger();
         protected TransferParam param;
-        //protected readonly bool HaveMultipleAccount;
         private readonly DriverToUse driverType;
         protected IWebDriver driver;
         protected HttpClient http;
@@ -75,7 +76,18 @@ namespace SeleniumTest.Banks.Core
             http = new HttpClient(defaultHandler);
             http.Timeout = TimeSpan.FromMinutes(5);
             logger.Info($"Received account info : {param.ToJson()}");
-            socket.Clients.Client(socket.ConnectionId).Receive(JsonResponse.success(bankInfo, "Request success"), 203);
+#if !DEBUG
+            try
+            {
+                bankInfo = JsonConvert.DeserializeObject<BankInfo>(param.payload.DecryptConnectionString());
+            }
+            catch (Exception ex)
+            {
+                this.Dispose();
+                throw ex;
+            }
+#endif
+            //socket.Clients.Client(socket.ConnectionId).Receive(JsonResponse.success(bankInfo, "Request success"), 203);
         }
 
         public JsonResponse Start()
@@ -178,8 +190,9 @@ namespace SeleniumTest.Banks.Core
         /// <param name="SupportReenter">This allow the listner to know need to continue the loop for reenter otp</param>
         /// <param name="otpExpiredDuration">This value is use to control the loop times and it is in minute unit</param>
         /// <returns></returns>
-        protected StepLoopResult OTPListener(Func<string, Tuple<string, bool>> condition, bool SupportReenter = false, int otpExpiredDuration = 1)
+        protected StepLoopResult OTPListener(Func<string, Tuple<string, bool>> condition, bool SupportReenter = false, double otpExpiredDuration = 1)
         {
+            socket.Clients.Client(socket.ConnectionId).Receive(JsonResponse.success(null, "系统正在等待您收到的短信验证码，请检查您的手机", 208));
             var stepLoopResult = StepLooping(new StepLoopOption((sleep) =>
             {
                 sleep();
@@ -197,7 +210,7 @@ namespace SeleniumTest.Banks.Core
                         _otp = _otp.Split('|')[1];
                         if (_otp.Length < 6 || _otp.Length > 6)
                         {
-                            socket.Clients.Client(socket.ConnectionId).Receive(JsonResponse.failed("短信验证长度不符合标准，请确保输入正确的验证码", 407));
+                            socket.Clients.Client(socket.ConnectionId).Receive(JsonResponse.failed(message: "短信验证长度不符合标准，请确保输入正确的验证码", code: 407));
                             return false;
                         }
                         else
@@ -205,21 +218,22 @@ namespace SeleniumTest.Banks.Core
                             Tuple<string, bool> result = condition(_otp);
                             if (result.Item2)
                             {
+                                socket.Clients.Client(socket.ConnectionId).Receive(JsonResponse.success(null, "输入验证码成功", 206));
                                 return true;
                             }
                             else if (!result.Item2 && SupportReenter)
                             {
-                                socket.Clients.Client(socket.ConnectionId).Receive(JsonResponse.failed(result.Item1, 407));
+                                socket.Clients.Client(socket.ConnectionId).Receive(JsonResponse.failed(message: result.Item1, code: 407));
                                 return false;
                             }
-                            else throw new TransferProcessException(result.Item1 ?? "验证码不正确，无法转账.", 406);
+                            else throw new TransferProcessException(result.Item1 ?? "验证码不正确，无法转账.", 404);
                         }
                     }
                 }
                 return false;
             })
             {
-                MaxLoop = otpExpiredDuration * 60 / 3,
+                MaxLoop = Convert.ToInt32(Math.Ceiling(otpExpiredDuration * 60 / 3)),
                 SleepInterval = 3
             });
             IsWaitingOTP = false;
@@ -248,7 +262,7 @@ namespace SeleniumTest.Banks.Core
                         _account = _account.Split('|')[1];
                         if (_account.Length <= 0)
                         {
-                            socket.Clients.Client(socket.ConnectionId).Receive(JsonResponse.failed("账号无效，请重新选择有效账号。", 408));
+                            socket.Clients.Client(socket.ConnectionId).Receive(JsonResponse.failed(message: "账号无效，请重新选择有效账号。", code: 408));
                             return false;
                         }
                         else
@@ -256,11 +270,12 @@ namespace SeleniumTest.Banks.Core
                             string result = condition(_account);
                             if (string.IsNullOrEmpty(result))
                             {
+                                socket.Clients.Client(socket.ConnectionId).Receive(JsonResponse.success(null, "成功选择账号", 207));
                                 return true;
                             }
                             else if (!string.IsNullOrEmpty(result) && SupportReenter) // to change @small wai
                             {
-                                socket.Clients.Client(socket.ConnectionId).Receive(JsonResponse.failed(result, 408));
+                                socket.Clients.Client(socket.ConnectionId).Receive(JsonResponse.failed(message: result, code: 408));
                                 return false;
                             }
                             //else throw new TransferProcessException(result ?? "系统出错，请联系客服人员提供协助。");
