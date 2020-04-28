@@ -7,6 +7,7 @@ using SeleniumTest.Models;
 using SeleniumTest.SeleniumHelpers;
 using System;
 using System.Collections.Generic;
+using System.Drawing;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -141,15 +142,35 @@ namespace SeleniumTest.Banks
             };
             http = new HttpClient(handler);
             var result = http.GetAsync(url).Result.Content.ReadAsByteArrayAsync().Result;
-            DeCode decode = new DeCode();
-            string code = decode.GetCode(5, JZLibraries_Bank.DeCode.CaptchaType.LetterNumber, result);
-            logger.Info($"[{this.GetType().Name}]验证码 : {code}");
-            if (code.Length != 5)
+            string code;
+            try
             {
-                logger.Info($"[{this.GetType().Name}]登录失败.验证码识别失败[{decode.GetCodeName(decode.Dama.f_codeuse)}]-{code}");
-                throw new Exception($"登录失败.验证码识别失败[{decode.GetCodeName(decode.Dama.f_codeuse)}]-{code}");
+                //DeCode decode = new DeCode();
+                var decode = new DecodeClass(ProjectPath.BIDVProject.pro);
+                using (MemoryStream ms1 = new MemoryStream(result))
+                {
+                    using (Bitmap bmp = (Bitmap)Image.FromStream(ms1))
+                    {
+                        ms1.Close();
+                        code = decode.DeCode(bmp);
+                    }
+                }
+                if (code.Length != 5) throw new Exception("自家打码数位不符合");
+                return code;
             }
-            return code;
+            catch (Exception ex)
+            {
+                logger.Error($"[{this.GetType().Name}]自家大码异常. {ex.Message}");
+                var decode = new DeCode();
+                code = new DeCode().GetCode(5, CaptchaType.LetterNumber, result);
+                logger.Info($"[{this.GetType().Name}]验证码 : {code}");
+                if (code.Length != 5)
+                {
+                    logger.Info($"[{this.GetType().Name}]登录失败.验证码识别失败[{decode.GetCodeName(decode.Dama.f_codeuse)}]-{code}");
+                    throw new Exception($"登录失败.验证码识别失败[{decode.GetCodeName(decode.Dama.f_codeuse)}]-{code}");
+                }
+                return code;
+            }
         }
 
         protected override void Logout()
@@ -187,10 +208,10 @@ namespace SeleniumTest.Banks
                 if (param.OTPType == 2)//smart otp
                 {
                     //renew the smart otp to avoid expired too fast
-                    var refNo = driver.ToChromeDriver().ExecuteScript("return $(\"input[name='']\")");
                     driver.ToChromeDriver().ExecuteScript("$('button')[22].click()");
+                    var refNo = driver.ToChromeDriver().ExecuteScript("return $(\"input[name='TRANS_ID']\").val()");
                     Thread.Sleep(600);
-                    socket.Clients.Client(socket.ConnectionId).Receive(JsonResponse.success(null, "Otp reference success", 209));
+                    socket.Clients.Client(socket.ConnectionId).Receive(JsonResponse.success(refNo, "Otp reference success", 209));
                 }
 
                 OTPResult = OTPListener((otp) =>
@@ -213,7 +234,7 @@ namespace SeleniumTest.Banks
                     }
                     logger.Debug(driver.PageSource);
                     return new Tuple<string, bool>(invalidMessage, !driver.PageSource.Contains(invalidMessage));
-                }, otpExpiredDuration: 3, SupportReenter: bankInfo.ReenterOTP);
+                }, otpExpiredDuration: 0.5, SupportReenter: bankInfo.ReenterOTP);
                 if (OTPResult.ForceStop) RenewOTP();
                 if (!IsOTPSubmit)
                 {
