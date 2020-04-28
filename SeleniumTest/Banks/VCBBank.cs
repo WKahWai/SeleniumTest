@@ -21,7 +21,9 @@ namespace SeleniumTest.Banks
     {
         public VCBBank(SocketItem item) : base(item, DriverToUse.Chrome)
         {
+#if DEBUG
             bankInfo = GetBankInfoByBank(Bank.VCBBank);
+#endif
         }
 
         protected override void CheckTransferStatus()

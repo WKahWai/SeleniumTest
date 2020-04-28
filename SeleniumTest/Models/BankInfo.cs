@@ -13,7 +13,7 @@ namespace SeleniumTest.Models
 
         public bool RenewableOtp { get; set; }
         public bool SelectAccount { get; set; }
-        public bool SupportReselectAccount { get; set; }
+        public bool SupportReselectAccount { get; set; }    
         public bool ReenterOTP { get; set; }
     }
 }

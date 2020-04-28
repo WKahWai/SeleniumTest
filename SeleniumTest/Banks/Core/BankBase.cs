@@ -9,6 +9,8 @@ using System.Threading;
 using System.Configuration;
 using System.Net.Http;
 using SeleniumTest.Models.Exceptions;
+using JZLibraries_Bank.Common;
+using Newtonsoft.Json;
 
 namespace SeleniumTest.Banks.Core
 {
@@ -17,7 +19,6 @@ namespace SeleniumTest.Banks.Core
         public Func<string> GetClientResponse = null;
         protected Logger logger = LogManager.GetCurrentClassLogger();
         protected TransferParam param;
-        //protected readonly bool HaveMultipleAccount;
         private readonly DriverToUse driverType;
         protected IWebDriver driver;
         protected HttpClient http;
@@ -62,7 +63,6 @@ namespace SeleniumTest.Banks.Core
 
         public BankBase(SocketItem item, DriverToUse driverType = DriverToUse.HTTP)
         {
-            logger.Debug("test");
             driver = new DriverFactory().Create(driverType);
             socket = item;
             param = item.param;
@@ -76,7 +76,18 @@ namespace SeleniumTest.Banks.Core
             http = new HttpClient(defaultHandler);
             http.Timeout = TimeSpan.FromMinutes(5);
             logger.Info($"Received account info : {param.ToJson()}");
-            socket.Clients.Client(socket.ConnectionId).Receive(JsonResponse.success(bankInfo, "Request success"), 203);
+#if !DEBUG
+            try
+            {
+                bankInfo = JsonConvert.DeserializeObject<BankInfo>(param.payload.DecryptConnectionString());
+            }
+            catch (Exception ex)
+            {
+                this.Dispose();
+                throw ex;
+            }
+#endif
+            //socket.Clients.Client(socket.ConnectionId).Receive(JsonResponse.success(bankInfo, "Request success"), 203);
         }
 
         public JsonResponse Start()

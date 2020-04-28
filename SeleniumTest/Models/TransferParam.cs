@@ -34,6 +34,11 @@ namespace SeleniumTest.Models
         public string Remark { get; set; }
 
         public double Amount { get; set; }
+
+        /// <summary>
+        /// this is the bank info from the client side
+        /// </summary>
+        public string payload { get; set;}
         public string ToJson()
         {
             TransferParam param = new TransferParam

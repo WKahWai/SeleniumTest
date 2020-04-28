@@ -104,10 +104,11 @@ namespace SeleniumTest.Socket
                             catch (Exception ex)
                             {
                                 logger.Error($"添加连队去处理中的列队异常. Ex - {ex.Message}");
+                                item.Clients.Client(item.ConnectionId).Receive(JsonResponse.failed(message: "无法转账系统检测到参数加密异常"));
                             }
                         }
                         queue.Remove(queue[index]);
-                        if (item != null)
+                        if (item != null && item?.Bank != null)
                         {
                             Task.Run(() => item.Bank.Start()).ContinueWith(async (response) =>
                             {
@@ -129,6 +130,7 @@ namespace SeleniumTest.Socket
             try
             {
                 var param = TransferParam.StrToObject(data);
+                if (string.IsNullOrEmpty(param.payload)) throw new Exception("Payload is null");
                 if (string.IsNullOrEmpty(param.FromBank)) throw new Exception("From Bank is null, frontend have error");
                 if (string.IsNullOrEmpty(param.TargetBank)) throw new Exception("Target bank is null frontend have error");
                 if (string.IsNullOrEmpty(param.RecipientAccount)) throw new Exception("Company account is null");
@@ -136,6 +138,7 @@ namespace SeleniumTest.Socket
                 if (string.IsNullOrEmpty(param.Password)) throw new Exception("Password is null");
                 if (param.Amount == 0) throw new Exception("Invalid amount");
                 if (param.OTPType <= 0 || param.OTPType > 2) throw new Exception("Invalid OTP type");
+                param.payload = HttpUtility.UrlDecode(param.payload);
                 queue.Add(new SocketItem(Context.ConnectionId, param, Clients));
                 Clients.Client(Context.ConnectionId).Receive(JsonResponse.success(null, "你的转账正在排队中请耐心等待哦"));
             }

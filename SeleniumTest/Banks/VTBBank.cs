@@ -18,7 +18,9 @@ namespace SeleniumTest.Banks
     {
         public VTBBank(SocketItem item) : base(item, DriverToUse.Chrome)
         {
+#if DEBUG
             bankInfo = GetBankInfoByBank(Bank.VTBBank);
+#endif
         }
 
         private void SwitchToEnglish()
