@@ -106,7 +106,7 @@ namespace SeleniumTest.Banks.Core
             var tranResult = BeginStep();
             watch.Stop();
             var elapsedMs = watch.ElapsedMilliseconds;
-            logger.Info($"Transfer time taken for account - {param.AccountNo} is {elapsedMs} ms");
+            logger.Info($"Transfer time taken for account - {param.AccountID} is {elapsedMs} ms");
             return tranResult;
         }
 
@@ -127,7 +127,7 @@ namespace SeleniumTest.Banks.Core
             }
             catch (TransferProcessException ex)
             {
-                logger.Info($"[{param.AccountNo}] - Transfer Stop due to - {ex.Message}");
+                logger.Info($"[{param.AccountID}] - Transfer Stop due to - {ex.Message}");
                 return JsonResponse.failed(ex.Message, null, ex.ErrorCode);
             }
             catch (Exception ex)
@@ -139,8 +139,8 @@ namespace SeleniumTest.Banks.Core
                 }
                 else
                 {
-                    logger.Info($"[{param.AccountNo}] - Error occur");
-                    logger.Error($"[{param.AccountNo}] - {ex.Message}");
+                    logger.Info($"[{param.AccountID}] - Transfer Stop due to unhandle or critical error occur");
+                    logger.Error($"[{param.AccountID}] - {ex.Message}");
                 }
                 return JsonResponse.failed($"转账中发生未处理到的错误", null);
             }
@@ -182,11 +182,11 @@ namespace SeleniumTest.Banks.Core
                 }
                 catch (Exception ex)
                 {
-                    if ((errorCount / option.MaxLoop) > 80)
+                    errorCount++;
+                    if ((errorCount / option.MaxLoop) * 100 > 80)
                     {
                         return StepLoopResult.Error($"在回转线中发生错误已大于80%,系统强行中断 : {ex.Message}");
                     }
-                    errorCount++;
                 }
             }
             return StepLoopResult.SetTimeout();

@@ -106,7 +106,7 @@ namespace SeleniumTest.Banks
                 MaxLoop = 5,
                 SleepInterval = 12
             });
-            if (result.HasError || !result.IsComplete) throw new Exception($"[{param.AccountNo}] - 登录失败");
+            if (result.HasError || !result.IsComplete) throw new Exception($"[{param.AccountNo}] - 登录失败。 Ex - {result.Message}");
             //RetriveDiness();
         }
 
@@ -236,12 +236,12 @@ namespace SeleniumTest.Banks
                     return new Tuple<string, bool>(invalidMessage, !driver.PageSource.Contains(invalidMessage));
                 }, otpExpiredDuration: 0.5, SupportReenter: bankInfo.ReenterOTP);
                 if (OTPResult.ForceStop) RenewOTP();
-                if (!IsOTPSubmit)
-                {
-                    if (OTPResult.HasError) throw new Exception($"[{param.AccountNo}] - Fail during OTP request. EX :  {OTPResult.Message}");
-                    else if (!OTPResult.IsComplete) throw new TransferProcessException("等待短信验证码超时", 406);
-                    //todo if need extra logic to verify is stuck in the same page
-                }
+                //if (!IsOTPSubmit)
+                //{
+                if (OTPResult.HasError) throw new Exception($"[{param.AccountNo}] - Fail during OTP request. EX :  {OTPResult.Message}");
+                else if (!OTPResult.IsComplete) throw new TransferProcessException("等待短信验证码超时", 406);
+                //todo if need extra logic to verify is stuck in the same page
+                //}
             }
             else
             {
@@ -252,6 +252,7 @@ namespace SeleniumTest.Banks
         protected override void RenewOTP()
         {
             driver.ToChromeDriver().ExecuteScript("$('button')[22].click()");
+            IsOTPSubmit = false;
             OTP();
         }
 
