@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNet.SignalR;
+using Newtonsoft.Json;
 using NLog;
 using SeleniumTest.Banks.Core;
 using SeleniumTest.Models;
@@ -104,7 +105,6 @@ namespace SeleniumTest.Socket
                             catch (Exception ex)
                             {
                                 logger.Error($"添加连队去处理中的列队异常. Ex - {ex.Message}");
-                                item.Clients.Client(item.ConnectionId).Receive(JsonResponse.failed(message: "无法转账系统检测到参数加密异常"));
                             }
                         }
                         queue.Remove(queue[index]);
@@ -113,7 +113,6 @@ namespace SeleniumTest.Socket
                             Task.Run(() => item.Bank.Start()).ContinueWith(async (response) =>
                             {
                                 item.Clients.Client(item.ConnectionId).Receive(await response);
-                                //Thread.Sleep(3000);
                                 item.Bank.Dispose();
                                 ProcessingList.Remove(item);
                             });

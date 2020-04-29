@@ -63,7 +63,15 @@ namespace SeleniumTest.Banks.Core
 
         public BankBase(SocketItem item, DriverToUse driverType = DriverToUse.HTTP)
         {
-            driver = new DriverFactory().Create(driverType);
+            try
+            {
+                driver = new DriverFactory().Create(driverType);
+            }
+            catch (Exception ex)
+            {
+                logger.Error($"初始化Web automation driver 异常可能版本问题或driver不存在. Ex - {ex.Message}");
+                throw ex;
+            }
             socket = item;
             param = item.param;
             this.driverType = driverType;
@@ -83,11 +91,12 @@ namespace SeleniumTest.Banks.Core
             }
             catch (Exception ex)
             {
+                logger.Error($"添加连队去处理中的列队失败，解析json string 异常导致. Ex - {ex.Message}");
+                item.Clients.Client(item.ConnectionId).Receive(JsonResponse.failed(message: "无法转账系统检测到参数加密异常"));
                 this.Dispose();
                 throw ex;
             }
 #endif
-            //socket.Clients.Client(socket.ConnectionId).Receive(JsonResponse.success(bankInfo, "Request success"), 203);
         }
 
         public JsonResponse Start()
