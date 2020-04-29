@@ -82,6 +82,9 @@ namespace SeleniumTest.Socket
         {
             while (true)
             {
+                GC.Collect();
+                GC.WaitForPendingFinalizers();
+                GC.Collect();
                 lock (ProcessingList)
                 {
                     int MaxQueue = int.Parse(ConfigurationManager.AppSettings["MaxQueue"]);
@@ -143,7 +146,7 @@ namespace SeleniumTest.Socket
             }
             catch (Exception ex)
             {
-                logger.Error($"Error occur during Hub Start method. {data}. Exception: {ex.Message}");
+                logger.Error($"开始初始化列队时出现错误. {data}. Exception: {ex.Message}");
                 Clients.Client(Context.ConnectionId).Receive(JsonResponse.failed("开始初始化列队时出现错误", code: 402));
             }
         }

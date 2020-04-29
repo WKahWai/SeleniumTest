@@ -58,6 +58,16 @@ namespace SeleniumTest.Banks.Core
             };
         }
 
+        protected virtual void LogError(string message, Exception ex = null)
+        {
+            logger.Error($"[{GetType().Name}][ClientId - {socket.ConnectionId}][AccountID - {param.AccountID ?? param.IdenityCardNo}] {message}" + ex == null ? "" : $" Ex - {ex.Message}");
+        }
+
+        protected virtual void LogInfo(string message)
+        {
+            logger.Info($"[{GetType().Name}][ClientId - {socket.ConnectionId}][AccountID - {param.AccountID ?? param.IdenityCardNo}] {message}");
+        }
+
         protected virtual void InputString(string str)
         {
             BankAction.InputString(str, 200);

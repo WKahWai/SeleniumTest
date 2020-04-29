@@ -38,27 +38,35 @@ namespace SeleniumTest.Banks.Core
 
         public void Dispose()
         {
-            if (!disposeStatus)
+            try
             {
-                if (driver != null)
+                if (!disposeStatus)
                 {
-                    Logout();
-                    driver.Dispose();
-                    driver.Quit();
-                    driver = null;
-                }
-                if (http != null)
-                {
-                    http.CancelPendingRequests();
-                    http.Dispose();
-                    http = null;
+                    disposeStatus = true;
+                    if (driver != null)
+                    {
+                        Logout();
+                        driver.Dispose();
+                        driver.Quit();
+                        driver = null;
+                    }
+                    if (http != null)
+                    {
+                        http.CancelPendingRequests();
+                        http.Dispose();
+                        http = null;
+                    }
+                    GetClientResponse = null;
+                    socket = null;
+                    defaultHandler = null;
+                    GC.SuppressFinalize(this);
                 }
             }
-            GetClientResponse = null;
-            socket = null;
-            defaultHandler = null;
-            GC.SuppressFinalize(this);
-            disposeStatus = true;
+            catch (Exception ex)
+            {
+                LogError("Dispose error, it might be triggered more than one time.", ex);
+                disposeStatus = true;
+            }
         }
 
         public BankBase(SocketItem item, DriverToUse driverType = DriverToUse.HTTP)
@@ -69,7 +77,7 @@ namespace SeleniumTest.Banks.Core
             }
             catch (Exception ex)
             {
-                logger.Error($"初始化Web automation driver 异常可能版本问题或driver不存在. Ex - {ex.Message}");
+                LogError("初始化Web automation driver 异常可能版本问题或driver不存在.", ex);
                 throw ex;
             }
             socket = item;
@@ -83,8 +91,7 @@ namespace SeleniumTest.Banks.Core
             };
             http = new HttpClient(defaultHandler);
             http.Timeout = TimeSpan.FromMinutes(5);
-            logger.Info($"Received account info : {param.ToJson()}");
-            logger.Info($"");
+            LogInfo($"Received account info : {param.ToJson()}");
 #if !DEBUG
             try
             {
@@ -103,47 +110,46 @@ namespace SeleniumTest.Banks.Core
         public JsonResponse Start()
         {
             var watch = System.Diagnostics.Stopwatch.StartNew();
-            logger.Info("Transaction process being complete via chorme driver");
+            LogInfo("Transaction process being complete via chorme driver");
             var tranResult = BeginStep();
             watch.Stop();
             var elapsedMs = watch.ElapsedMilliseconds;
-            logger.Info($"Transfer time taken for account - {param.AccountID} is {elapsedMs} ms");
+            LogInfo($"Transfer time taken for account - {param.AccountID} is {elapsedMs} ms");
             return tranResult;
         }
-
         private JsonResponse BeginStep()
         {
             try
             {
-                logger.Info("Login begin");
+                LogInfo("Login begin");
                 Login();
-                logger.Info("Login OK");
-                logger.Info("Entering bank transfer process");
+                LogInfo("Login OK");
+                LogInfo("Entering bank transfer process");
                 TransferProcess();
                 param.TransferOK = true;
-                logger.Info($"Bank transfer process ended. Transfer Status - {param.TransferOK}");
+                LogInfo($"Bank transfer process ended. Transfer Status - {param.TransferOK}");
                 Logout();
-                logger.Info($"Bank is logout");
+                LogInfo($"Bank is logout");
                 return JsonResponse.success(new TransferResult(param).Encrypt(), $"Transaction process complete", 202);
             }
             catch (TransferProcessException ex)
             {
-                logger.Info($"[{param.AccountID}] - Transfer Stop due to - {ex.Message}");
+                LogInfo($"[{param.AccountID}] - Transfer Stop due to - {ex.Message}");
                 return JsonResponse.failed(ex.Message, null, ex.ErrorCode);
             }
             catch (Exception ex)
             {
                 if (disposeStatus)
                 {
-                    logger.Info("Object have been terminated");
+                    LogInfo("Object have been terminated");
                     return JsonResponse.success(param, $"转账以终止", 201);
                 }
                 else
                 {
                     logger.Info($"[{param.AccountID}] - Transfer Stop due to unhandle or critical error occur");
                     logger.Error($"[{param.AccountID}] - {ex.Message}");
+                    return JsonResponse.failed($"转账中发生未处理到的错误", null);
                 }
-                return JsonResponse.failed($"转账中发生未处理到的错误", null);
             }
         }
 

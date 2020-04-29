@@ -95,18 +95,18 @@ namespace SeleniumTest.Banks
                     string message = (string)driver.ToChromeDriver().ExecuteScript("return $('.mes_error').text()");
                     if (string.IsNullOrEmpty(message))
                     {
-                        logger.Info("Have unhandle error, so the system log the page soruce to debug log");
-                        logger.Debug($"Page source for account - {param.AccountNo}. {driver.PageSource}");
+                        LogInfo("Have unhandle error, so the system log the page soruce to debug log");
+                        logger.Debug($"Page source for account - {param.AccountID}. {driver.PageSource}");
                     }
                     else
                     {
-                        logger.Info($"Account [{param.AccountNo}] - Error occur during login. {message}");
+                        LogInfo($"Error occur during login. {message}");
                     }
                     throw new TransferProcessException("登录失败，请确保密码或户名正确", 403);
                 }
             })
             {
-                MaxLoop = 2,
+                MaxLoop = 3,
                 SleepInterval = 5
             });
             if (condition.HasError || !condition.IsComplete) throw new Exception(condition.Message);
@@ -124,10 +124,10 @@ namespace SeleniumTest.Banks
             var result = http.GetAsync(url).Result;
             DeCode decode = new DeCode();
             string code = decode.GetCode(5, JZLibraries_Bank.DeCode.CaptchaType.LetterNumber, result.Content.ReadAsByteArrayAsync().Result);
-            logger.Info($"[{this.GetType().Name}]验证码 : {code}");
+            LogInfo($"[{this.GetType().Name}]验证码 : {code}");
             if (code.Length != 5)
             {
-                logger.Info($"[{this.GetType().Name}]登录失败.验证码识别失败[{decode.GetCodeName(decode.Dama.f_codeuse)}]-{code}");
+                LogInfo($"登录失败.验证码识别失败[{decode.GetCodeName(decode.Dama.f_codeuse)}]-{code}");
                 throw new Exception($"登录失败.验证码识别失败[{decode.GetCodeName(decode.Dama.f_codeuse)}]-{code}");
             }
             return code;
@@ -145,12 +145,12 @@ namespace SeleniumTest.Banks
             try
             {
                 driver.ToChromeDriver().ExecuteScript("$('.logout-en').children()[0].click();");
-                logger.Info($"Account [{param.AccountNo}] - Logout successful");
+                LogInfo($"Logout successful");
             }
             catch (Exception ex)
             {
-                logger.Info($"Account [{param.AccountNo}] - Logout failed");
-                logger.Error($"Account [{param.AccountNo}] - {ex.Message}");
+                LogInfo($"Logout failed");
+                LogError("Logout failed", ex);
             }
         }
 
