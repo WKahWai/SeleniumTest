@@ -209,6 +209,7 @@ namespace SeleniumTest.Banks
                 {
                     //renew the smart otp to avoid expired too fast
                     driver.ToChromeDriver().ExecuteScript("$('button')[22].click()");
+                    Thread.Sleep(1600);
                     var refNo = driver.ToChromeDriver().ExecuteScript("return $(\"input[name='TRANS_ID']\").val()");
                     Thread.Sleep(600);
                     socket.Clients.Client(socket.ConnectionId).Receive(JsonResponse.success(refNo, "Otp reference success", 209));
@@ -225,16 +226,17 @@ namespace SeleniumTest.Banks
                     Thread.Sleep(1000);
                     submitBtn.Click();
                     //driver.ToChromeDriver().ExecuteScript("$('button')[24].click()");
-                    Thread.Sleep(800);
+                    Thread.Sleep(3000);
                     IsOTPSubmit = true;
                     string invalidMessage = "OTP entered is incorrect. Please try again";
-                    if (driver.PageSource.Contains("Please enter the OTP"))
+                    if (driver.PageSource.Contains("Please enter the OTP") && !driver.PageSource.Contains("class=\" CONF_OD_SUCCESS_IMG\""))
                     {
                         return new Tuple<string, bool>("Please enter the OTP, OTP cannot be null", !driver.PageSource.Contains("Please enter the OTP"));
                     }
                     logger.Debug(driver.PageSource);
-                    return new Tuple<string, bool>(invalidMessage, !driver.PageSource.Contains(invalidMessage));
-                }, otpExpiredDuration: 0.5, SupportReenter: bankInfo.ReenterOTP);
+                    Thread.Sleep(1000);
+                    return new Tuple<string, bool>(invalidMessage, !driver.PageSource.Contains(invalidMessage) && ((driver.PageSource.ToLower().Contains("reference number")) || driver.PageSource.Contains("class=\" CONF_OD_SUCCESS_IMG\"") || driver.PageSource.Contains("class=\" CONF_OD_FAILURE_IMG x-hide-display\"")));
+                }, otpExpiredDuration: 3, SupportReenter: bankInfo.ReenterOTP);
                 if (OTPResult.ForceStop) RenewOTP();
                 //if (!IsOTPSubmit)
                 //{
