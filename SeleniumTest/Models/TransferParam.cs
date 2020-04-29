@@ -47,6 +47,12 @@ namespace SeleniumTest.Models
                 Password = "",
                 AccountID = AccountID,
                 IsSameBank = IsSameBank,
+                TargetBank = TargetBank,
+                FromBank = FromBank,
+                OTPType = OTPType,
+                Remark = Remark,
+                Amount = Amount,
+                payload = payload,
                 TransferOK = TransferOK
             };
             return JsonConvert.SerializeObject(param);

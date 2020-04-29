@@ -84,6 +84,7 @@ namespace SeleniumTest.Banks.Core
             http = new HttpClient(defaultHandler);
             http.Timeout = TimeSpan.FromMinutes(5);
             logger.Info($"Received account info : {param.ToJson()}");
+            logger.Info($"");
 #if !DEBUG
             try
             {
