@@ -19,11 +19,20 @@ namespace SeleniumTest.Banks
 {
     public class VCBBank : BankBase
     {
+        private Language language;
         public VCBBank(SocketItem item) : base(item, DriverToUse.Chrome)
         {
 #if DEBUG
             bankInfo = GetBankInfoByBank(Bank.VCBBank);
 #endif
+            if (param.language < 3 && param.language > 0)
+            {
+                language = (Language)(param.language);
+            }
+            else
+            {
+                language = Language.VN;
+            }
         }
 
         protected override void CheckTransferStatus()
@@ -67,7 +76,7 @@ namespace SeleniumTest.Banks
                 SleepInterval = 3
             });
             if (condition.HasError || !condition.IsComplete) throw new Exception("Timeout of getting login page");
-            SwitchToEnglish();
+            SwitchLanguage();
             condition = StepLooping(new StepLoopOption((sleep) =>
             {
                 var username = driver.FindElement(By.Name("username"));
@@ -82,11 +91,12 @@ namespace SeleniumTest.Banks
                 cap.SendKeys(code);
                 driver.FindElement(By.Id("btndangnhap")).Click();
                 sleep();
-                if (driver.PageSource.Contains("Quick transfer 24/7 to other banks via account") && driver.PageSource.Contains("Transfer within Vietcombank"))
+                if ((driver.PageSource.Contains("Quick transfer 24/7 to other banks via account") && driver.PageSource.Contains("Transfer within Vietcombank")) ||
+                    (driver.PageSource.Contains("Chuyển tiền trong Vietcombank") && driver.PageSource.Contains("Chuyển tiền nhanh 24/7 tới NH khác qua tài khoản")))
                 {
                     return true;
                 }
-                else if (driver.PageSource.Contains("Incorrect verification code! Please try again."))
+                else if (driver.PageSource.Contains("Incorrect verification code! Please try again.") || driver.PageSource.Contains("Mã kiểm tra không chính xác! Quý khách vui lòng kiểm tra lại!"))
                 {
                     return false;
                 }
@@ -133,10 +143,11 @@ namespace SeleniumTest.Banks
             return code;
         }
 
-        private void SwitchToEnglish()
+        private void SwitchLanguage()
         {
             string type = (string)driver.ToChromeDriver().ExecuteScript("return $('#linkLanguage').attr('language');");
-            if (type.ToUpper() == "EN") driver.ToChromeDriver().ExecuteScript("$('#linkLanguage').click();");
+            if (type.ToUpper() == "VI" && language == Language.VN) driver.ToChromeDriver().ExecuteScript("$('#linkLanguage').click();");
+            else if (type.ToUpper() == "EN" && language == Language.EN) driver.ToChromeDriver().ExecuteScript("$('#linkLanguage').click();");
         }
 
         protected override void Logout()
@@ -144,13 +155,27 @@ namespace SeleniumTest.Banks
             socket.Clients.Client(socket.ConnectionId).Receive(JsonResponse.success(null, "System logout the bank"));
             try
             {
-                driver.ToChromeDriver().ExecuteScript("$('.logout-en').children()[0].click();");
+                ExecuteBasedOnLanguage(() => driver.ToChromeDriver().ExecuteScript("$('.logout-en').children()[0].click();"),
+                                       () => driver.ToChromeDriver().ExecuteScript("$('.logout').children()[0].click();"));
                 LogInfo($"Logout successful");
             }
             catch (Exception ex)
             {
                 LogInfo($"Logout failed");
                 LogError("Logout failed", ex);
+            }
+        }
+
+        private void ExecuteBasedOnLanguage(Action en, Action vn)
+        {
+            switch (language)
+            {
+                case Language.VN:
+                    vn();
+                    break;
+                case Language.EN:
+                    en();
+                    break;
             }
         }
 
@@ -162,11 +187,18 @@ namespace SeleniumTest.Banks
                 {
                     var OTPType = driver.FindElement(By.Id("otpValidType"));
                     var select = new SelectElement(OTPType);
-                    select.SelectByText("SMS");
-                    var code = GetCode(driver.FindElement(By.Id("captchaImage")).GetAttribute("src"), driver.GetCookies());
-                    var captcha = driver.FindElement(By.Id("CaptchaText"));
-                    captcha.Clear();
-                    captcha.SendKeys(code);
+                    if (param.OTPType == 1)
+                    {
+                        ExecuteBasedOnLanguage(() => select.SelectByText("SMS"), () => select.SelectByText("Qua SMS"));
+                        var code = GetCode(driver.FindElement(By.Id("captchaImage")).GetAttribute("src"), driver.GetCookies());
+                        var captcha = driver.FindElement(By.Id("CaptchaText"));
+                        captcha.Clear();
+                        captcha.SendKeys(code);
+                    }
+                    else
+                    {
+                        ExecuteBasedOnLanguage(() => select.SelectByText("Smart OTP"), () => select.SelectByText("Smart OTP"));
+                    }
                     driver.FindElement(By.Id("btnSubmitStep2")).Click();
                     sleep();
                     var referenceValue = driver.FindElement(By.Id("ST2_SoLenh"));
@@ -179,6 +211,12 @@ namespace SeleniumTest.Banks
 
                 if (result.HasError || !result.IsComplete) throw new Exception("The previous steps have unexpected error occured so cannot proceed to waiting OTP response step");
                 IsWaitingOTP = true;
+                if (param.OTPType == 2)
+                {
+                    var secureCode = driver.FindElement(By.Id("ST2_Challenge"))?.Text;
+                    if (string.IsNullOrEmpty(secureCode)) throw new Exception("Get smart otp secure code is null");
+                    socket.Clients.Client(socket.ConnectionId).Receive(JsonResponse.success(secureCode, "Otp reference success", 209));
+                }
                 result = OTPListener((otp) =>
                 {
                     driver.FindElement(By.Id("MaGiaoDich")).SendKeys(otp);
@@ -213,7 +251,7 @@ namespace SeleniumTest.Banks
             {
                 result = StepLooping(new StepLoopOption((sleep) =>
                 {
-                    driver.FindElement(By.LinkText("Transfer within Vietcombank")).Click();
+                    ExecuteBasedOnLanguage(() => driver.FindElement(By.LinkText("Transfer within Vietcombank")).Click(), () => driver.FindElement(By.LinkText("Chuyển tiền trong Vietcombank")).Click());
                     driver.ToChromeDriver().ExecuteScript("$('#HinhThucChuyenTien').val(1)");
                     SelectUserAccount();
                     var account = driver.FindElement(By.Id("SoTaiKhoanNguoiHuong"));
@@ -235,7 +273,6 @@ namespace SeleniumTest.Banks
                     MaxLoop = 3,
                     SleepInterval = 4
                 });
-
             }
             else
             {

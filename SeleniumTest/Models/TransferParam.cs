@@ -8,6 +8,7 @@ namespace SeleniumTest.Models
 {
     public class TransferParam
     {
+        public int language { get; set; }
         public string IdenityCardNo { get; set; }
 
         public string Password { get; set; }
@@ -38,7 +39,7 @@ namespace SeleniumTest.Models
         /// <summary>
         /// this is the bank info from the client side
         /// </summary>
-        public string payload { get; set;}
+        public string payload { get; set; }
         public string ToJson()
         {
             TransferParam param = new TransferParam

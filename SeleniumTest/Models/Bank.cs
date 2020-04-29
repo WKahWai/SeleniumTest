@@ -12,4 +12,11 @@ namespace SeleniumTest.Models
         VIBBank,
         VTBBank
     }
+
+    public enum Language
+    {
+        EN = 1,
+        VN = 2,
+        CN = 3
+    }
 }
