@@ -61,6 +61,14 @@ namespace SeleniumTest.Banks
             Thread.Sleep(2000);
         }
 
+        protected override void SetLanguage()
+        {
+            //override this and set this is because each bank support differnt type of language so
+            //the langauge enum is defined in the class individually therefore override this method will
+            //output the acurate langauge result
+            lang = new LanguageDecider(language, logger);
+        }
+
         protected override void Login()
         {
             socket.Clients.Client(socket.ConnectionId).Receive(JsonResponse.success(null, "System start login the bank"));
@@ -77,49 +85,56 @@ namespace SeleniumTest.Banks
             });
             if (condition.HasError || !condition.IsComplete) throw new Exception("Timeout of getting login page");
             SwitchLanguage();
-            condition = StepLooping(new StepLoopOption((sleep) =>
+            IsWaitingLogin = true;
+            var loginListnerResult = LoginListener(() =>
             {
-                var username = driver.FindElement(By.Name("username"));
-                username.Clear();
-                username.SendKeys(param.AccountID);
-                var password = driver.FindElement(By.Name("pass"));
-                password.Clear();
-                password.SendKeys(param.Password);
-                var code = GetCode(driver.FindElement(By.Id("captchaImage")).GetAttribute("src"), driver.GetCookies());
-                var cap = driver.FindElement(By.Id("txtcapcha"));
-                cap.Clear();
-                cap.SendKeys(code);
-                driver.FindElement(By.Id("btndangnhap")).Click();
-                sleep();
-                if ((driver.PageSource.Contains("Quick transfer 24/7 to other banks via account") && driver.PageSource.Contains("Transfer within Vietcombank")) ||
-                    (driver.PageSource.Contains("Chuyển tiền trong Vietcombank") && driver.PageSource.Contains("Chuyển tiền nhanh 24/7 tới NH khác qua tài khoản")))
+                condition = StepLooping(new StepLoopOption((sleep) =>
                 {
-                    return true;
-                }
-                else if (driver.PageSource.Contains("Incorrect verification code! Please try again.") || driver.PageSource.Contains("Mã kiểm tra không chính xác! Quý khách vui lòng kiểm tra lại!"))
-                {
-                    return false;
-                }
-                else
-                {
-                    string message = (string)driver.ToChromeDriver().ExecuteScript("return $('.mes_error').text()");
-                    if (string.IsNullOrEmpty(message))
+                    var username = driver.FindElement(By.Name("username"));
+                    username.Clear();
+                    username.SendKeys(param.AccountID);
+                    var password = driver.FindElement(By.Name("pass"));
+                    password.Clear();
+                    password.SendKeys(param.Password);
+                    var code = GetCode(driver.FindElement(By.Id("captchaImage")).GetAttribute("src"), driver.GetCookies());
+                    var cap = driver.FindElement(By.Id("txtcapcha"));
+                    cap.Clear();
+                    cap.SendKeys(code);
+                    driver.FindElement(By.Id("btndangnhap")).Click();
+                    sleep();
+                    if ((driver.PageSource.Contains("Quick transfer 24/7 to other banks via account") && driver.PageSource.Contains("Transfer within Vietcombank")) ||
+                        (driver.PageSource.Contains("Chuyển tiền trong Vietcombank") && driver.PageSource.Contains("Chuyển tiền nhanh 24/7 tới NH khác qua tài khoản")))
                     {
-                        LogInfo("Have unhandle error, so the system log the page soruce to debug log");
-                        logger.Debug($"Page source for account - {param.AccountID}. {driver.PageSource}");
+                        return true;
+                    }
+                    else if (driver.PageSource.Contains("Incorrect verification code! Please try again.") || driver.PageSource.Contains("Mã kiểm tra không chính xác! Quý khách vui lòng kiểm tra lại!"))
+                    {
+                        return false;
                     }
                     else
                     {
-                        LogInfo($"Error occur during login. {message}");
+                        string message = (string)driver.ToChromeDriver().ExecuteScript("return $('.mes_error').text()");
+                        if (string.IsNullOrEmpty(message))
+                        {
+                            LogInfo("Have unhandle error, so the system log the page soruce to debug log");
+                            logger.Debug($"Page source for account - {param.AccountID}. {driver.PageSource}");
+                        }
+                        else
+                        {
+                            LogInfo($"Error occur during login. {message}");
+                        }
+                        throw new TransferProcessException("登录失败，请确保密码或户名正确", 403);
                     }
-                    throw new TransferProcessException("登录失败，请确保密码或户名正确", 403);
-                }
-            })
-            {
-                MaxLoop = 3,
-                SleepInterval = 5
+                })
+                {
+                    MaxLoop = 3,
+                    SleepInterval = 5
+                });
+                if (condition.HasError || !condition.IsComplete) throw new Exception(condition.Message);
+                else return true;
             });
-            if (condition.HasError || !condition.IsComplete) throw new Exception(condition.Message);
+            if (loginListnerResult.HasError) throw new Exception(loginListnerResult.Message);
+            else if (!loginListnerResult.IsComplete) throw new TransferProcessException(lang.GetLanguage().LoginTimeout, 410);
         }
 
         private string GetCode(string url, CookieContainer cookie)

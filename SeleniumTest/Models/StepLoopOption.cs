@@ -12,7 +12,7 @@ namespace BankAPI.Model
         /// <summary>
         /// Time of thread sleep in second
         /// </summary>
-        public int SleepInterval
+        public double SleepInterval
         {
             get
             {
@@ -23,7 +23,7 @@ namespace BankAPI.Model
                 _Interval = value * 1000;
             }
         }
-        private int _Interval;
+        private double _Interval;
         public Func<Action, bool> ActionTask { get; }
 
         public StepLoopOption(Func<Action, bool> ActionTask)

@@ -332,6 +332,7 @@
     <Compile Include="Models\Exceptions\StepLoopStop.cs" />
     <Compile Include="Models\Exceptions\TransferProcessException.cs" />
     <Compile Include="Models\JsonResponse.cs" />
+    <Compile Include="Models\LanguageModel.cs" />
     <Compile Include="Models\ProjectModel.cs" />
     <Compile Include="Models\SocketItem.cs" />
     <Compile Include="Models\StepLoopOption.cs" />
@@ -380,6 +381,8 @@
     <Content Include="Areas\HelpPage\Views\Help\DisplayTemplates\ApiGroup.cshtml" />
     <Content Include="Areas\HelpPage\Views\Help\Api.cshtml" />
     <Content Include="NLog.config" />
+    <Content Include="Language\vn.json" />
+    <Content Include="Language\en.json" />
     <None Include="Properties\PublishProfiles\FolderProfile.pubxml" />
     <None Include="Properties\PublishProfiles\FolderProfile1.pubxml" />
     <None Include="Scripts\jquery-3.4.1.intellisense.js" />

@@ -11,6 +11,7 @@ using System.Net.Http;
 using SeleniumTest.Models.Exceptions;
 using JZLibraries_Bank.Common;
 using Newtonsoft.Json;
+using System.IO;
 
 namespace SeleniumTest.Banks.Core
 {
@@ -27,6 +28,8 @@ namespace SeleniumTest.Banks.Core
         protected SocketItem socket;
         public bool IsWaitingOTP = false;
         protected BankInfo bankInfo;
+        protected bool IsWaitingLogin = false;
+        protected LanguageDecider lang;
 
         public bool isDisposed() => disposeStatus;
 
@@ -35,6 +38,8 @@ namespace SeleniumTest.Banks.Core
             string assembily = ConfigurationManager.AppSettings["BankSurname"];
             return (BankBase)Activator.CreateInstance(Type.GetType($"{assembily}.{item.param.GetBankName().ToString()}"), new object[] { item });
         }
+
+        protected virtual void SetLanguage() => lang = new LanguageDecider(Language.VN, logger);
 
         public void Dispose()
         {
@@ -109,6 +114,7 @@ namespace SeleniumTest.Banks.Core
 
         public JsonResponse Start()
         {
+            SetLanguage();
             var watch = System.Diagnostics.Stopwatch.StartNew();
             LogInfo("Transaction process being complete via chorme driver");
             var tranResult = BeginStep();
@@ -134,7 +140,7 @@ namespace SeleniumTest.Banks.Core
             }
             catch (TransferProcessException ex)
             {
-                LogInfo($"[{param.AccountID}] - Transfer Stop due to - {ex.Message}");
+                LogInfo($"[{param.AccountID}] - Transfer Stop due to - 转账过程有误: {ex.Message}");
                 return JsonResponse.failed(ex.Message, null, ex.ErrorCode);
             }
             catch (Exception ex)
@@ -174,7 +180,7 @@ namespace SeleniumTest.Banks.Core
             {
                 try
                 {
-                    if (option.ActionTask(() => Thread.Sleep(option.SleepInterval)))
+                    if (option.ActionTask(() => Thread.Sleep(Convert.ToInt32(option.SleepInterval))))
                     {
                         return StepLoopResult.Complete();
                     }
@@ -197,6 +203,60 @@ namespace SeleniumTest.Banks.Core
                 }
             }
             return StepLoopResult.SetTimeout();
+        }
+
+        protected StepLoopResult LoginListener(Func<bool> condition)
+        {
+            socket.Clients.Client(socket.ConnectionId).Receive(JsonResponse.success(null, "系统等待您登录", 210));
+            int timeout = param.timeout < 50 ? 180 : param.timeout;
+            var stepLoopResult = StepLooping(new StepLoopOption((sleep) =>
+            {
+                sleep();
+                if (GetClientResponse != null && IsWaitingLogin)
+                {
+                    string _json = GetClientResponse();
+                    GetClientResponse = null;
+                    if (_json.Contains("login|"))
+                    {
+                        try
+                        {
+                            _json = _json.Split('|')[1];
+                            if (string.IsNullOrEmpty(_json)) return false;
+                            TransferParam _param = TransferParam.StrToObject(_json);
+                            if (string.IsNullOrEmpty(_param.AccountID)) throw new InvalidDataException(lang.GetLanguage().UsernameNull);
+                            if (string.IsNullOrEmpty(_param.Password)) throw new InvalidDataException(lang.GetLanguage().PasswordNull);
+                            if (_param.OTPType <= 0 || _param.OTPType > 2) throw new InvalidDataException(lang.GetLanguage().OTPTypeWrong);
+                            param.AccountID = _param.AccountID;
+                            param.Password = _param.Password;
+                            param.OTPType = _param.OTPType;
+                            return condition();
+                        }
+                        catch (InvalidDataException ex)
+                        {
+                            LogInfo(ex.Message);
+                            socket.Clients.Client(socket.ConnectionId).Receive(JsonResponse.failed(ex.Message, null, 403));
+                        }
+                        catch (TransferProcessException ex)
+                        {
+                            LogInfo(ex.Message);
+                            socket.Clients.Client(socket.ConnectionId).Receive(JsonResponse.failed(ex.Message, null, ex.ErrorCode));
+                        }
+                        catch (Exception ex)
+                        {
+                            LogError("Login have error so login listener force stop", ex);
+                            LogInfo("Login have error so login listener force stop");
+                            throw new StepLoopStop();
+                        }
+                    }
+                }
+                return false;
+            })
+            {
+                SleepInterval = 1,
+                MaxLoop = timeout
+            });
+            IsWaitingLogin = false;
+            return stepLoopResult;
         }
 
         /// <summary>

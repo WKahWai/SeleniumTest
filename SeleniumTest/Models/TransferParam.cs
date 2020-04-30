@@ -9,6 +9,9 @@ namespace SeleniumTest.Models
     public class TransferParam
     {
         public int language { get; set; }
+
+        public int timeout { get; set; }
+
         public string IdenityCardNo { get; set; }
 
         public string Password { get; set; }
@@ -44,6 +47,8 @@ namespace SeleniumTest.Models
         {
             TransferParam param = new TransferParam
             {
+                language = language,
+                timeout = timeout,
                 IdenityCardNo = IdenityCardNo,
                 Password = "",
                 AccountID = AccountID,
