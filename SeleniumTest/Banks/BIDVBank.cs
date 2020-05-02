@@ -57,12 +57,12 @@ namespace SeleniumTest.Banks
             {
                 throw new NotImplementedException();
             }
-            if (result.HasError || !result.IsComplete) throw new Exception("Transfer failed");
+            if (result.HasError || !result.IsComplete) throw new Exception($"Transfer failed");
         }
 
         protected override void Login()
         {
-            socket.Clients.Client(socket.ConnectionId).Receive(JsonResponse.success(null, $"[{param.AccountNo}] - 系统开始登陆网银"));
+            //socket.Clients.Client(socket.ConnectionId).Receive(JsonResponse.success(null, $"[AccountID - {param.AccountID}] - 系统开始登陆网银"));
             var result = StepLooping(new StepLoopOption((sleep) =>
             {
                 driver.Url = "https://www.bidv.vn:81/iportalweb/iRetail@1";
@@ -74,40 +74,48 @@ namespace SeleniumTest.Banks
                 MaxLoop = 3,
                 SleepInterval = 8
             });
-            if (result.HasError || !result.IsComplete) throw new Exception($"[{param.AccountNo}] - 获取首页失败");
+            if (result.HasError || !result.IsComplete) throw new Exception($"获取首页失败");
             SwitchToEnglish();
-            result = StepLooping(new StepLoopOption((sleep) =>
+            IsWaitingLogin = true;
+            var loginResult = LoginListener(() =>
             {
-                Thread.Sleep(3000);
-                var userId = driver.FindElement(By.Id("userNo"));
-                userId.Clear();
-                userId.SendKeys(param.AccountID);
-                var pass = driver.FindElement(By.Id("userPin"));
-                pass.Clear();
-                pass.SendKeys(param.Password);
-
-                string code = GetCode(driver.FindElement(By.Id("captcha")).GetAttribute("src"), driver.GetCookies());
-                if (string.IsNullOrEmpty(code)) return false;
-                var cap = driver.FindElement(By.Id("cap1"));
-                cap.Clear();
-                cap.SendKeys(code);
-                driver.ToChromeDriver().ExecuteScript("SubmitForm();");
-                sleep();
-                Regex Logoutregex = new Regex("(<a ?.*><span>(?<logout>Logout)</span>?.*</a>)");
-                if (Logoutregex.Match(driver.PageSource).Groups["logout"].Value.ToLower() == "logout") return true;
-                else
+                result = StepLooping(new StepLoopOption((sleep) =>
                 {
-                    string error = (string)driver.ToChromeDriver().ExecuteScript("return $('#errid1').text();");
-                    if (!string.IsNullOrEmpty(error)) throw new TransferProcessException(error, 403);
-                }
-                return false;
-            })
-            {
-                MaxLoop = 5,
-                SleepInterval = 12
+                    Thread.Sleep(3000);
+                    var userId = driver.FindElement(By.Id("userNo"));
+                    userId.Clear();
+                    userId.SendKeys(param.AccountID);
+                    var pass = driver.FindElement(By.Id("userPin"));
+                    pass.Clear();
+                    pass.SendKeys(param.Password);
+
+                    string code = GetCode(driver.FindElement(By.Id("captcha")).GetAttribute("src"), driver.GetCookies());
+                    if (string.IsNullOrEmpty(code)) return false;
+                    var cap = driver.FindElement(By.Id("cap1"));
+                    cap.Clear();
+                    cap.SendKeys(code);
+                    driver.ToChromeDriver().ExecuteScript("SubmitForm();");
+                    sleep();
+                    Regex Logoutregex = new Regex("(<a ?.*><span>(?<logout>Logout)</span>?.*</a>)");
+                    if (Logoutregex.Match(driver.PageSource).Groups["logout"].Value.ToLower() == "logout") return true;
+                    else
+                    {
+                        string error = (string)driver.ToChromeDriver().ExecuteScript("return $('#errid1').text();");
+                        if (!string.IsNullOrEmpty(error)) throw new TransferProcessException(error, 403);
+                    }
+                    return false;
+                })
+                {
+                    MaxLoop = 5,
+                    SleepInterval = 12
+                });
+                if (result.HasError || !result.IsComplete) throw new Exception($"登录失败。 Ex - {result.Message}");
+                else return true;
             });
-            if (result.HasError || !result.IsComplete) throw new Exception($"[{param.AccountNo}] - 登录失败。 Ex - {result.Message}");
             //RetriveDiness();
+            if (loginResult.HasError) throw new Exception(loginResult.Message);
+            else if (!loginResult.IsComplete && !loginResult.ForceStop) throw new TransferProcessException(lang.GetLanguage().LoginTimeout, 410);
+            else if (loginResult.ForceStop) throw new Exception("Login have error");
         }
 
         private void SwitchToEnglish()
@@ -160,13 +168,13 @@ namespace SeleniumTest.Banks
             }
             catch (Exception ex)
             {
-                logger.Error($"[{this.GetType().Name}]自家大码异常. {ex.Message}");
+                LogError($"自家大码异常.", ex);
                 var decode = new DeCode();
                 code = new DeCode().GetCode(5, CaptchaType.LetterNumber, result);
-                logger.Info($"[{this.GetType().Name}]验证码 : {code}");
+                LogInfo($"验证码 : {code}");
                 if (code.Length != 5)
                 {
-                    logger.Info($"[{this.GetType().Name}]登录失败.验证码识别失败[{decode.GetCodeName(decode.Dama.f_codeuse)}]-{code}");
+                    LogInfo($"登录失败.验证码识别失败[{decode.GetCodeName(decode.Dama.f_codeuse)}]-{code}");
                     throw new Exception($"登录失败.验证码识别失败[{decode.GetCodeName(decode.Dama.f_codeuse)}]-{code}");
                 }
                 return code;
@@ -181,15 +189,15 @@ namespace SeleniumTest.Banks
                 driver.ToChromeDriver().ExecuteScript("iportal.logoutUser();");
                 Thread.Sleep(1000);
                 Regex regex = new Regex("(<em ?.*><button type=\"button\" id=\"(?<btnId>.*)\" class=\" x-btn-text\">Yes</button></em>)");
-                if (!regex.IsMatch(driver.PageSource)) throw new Exception();
+                if (!regex.IsMatch(driver.PageSource)) throw new Exception("Cannot find logout button");
                 string logoutBtnId = regex.Match(driver.PageSource).Groups["btnId"].Value;
                 driver.ToChromeDriver().ExecuteScript($"$('#{logoutBtnId}').click();");
                 Thread.Sleep(2000);
-                logger.Info($"[{param.AccountNo}] - Logout success");
+                LogInfo($"Logout success");
             }
             catch (Exception ex)
             {
-                logger.Error($"[{param.AccountNo}] - Logout failed. {ex.Message}");
+                LogError($"Logout failed.", ex);
             }
         }
 
@@ -240,7 +248,7 @@ namespace SeleniumTest.Banks
                 if (OTPResult.ForceStop) RenewOTP();
                 //if (!IsOTPSubmit)
                 //{
-                if (OTPResult.HasError) throw new Exception($"[{param.AccountNo}] - Fail during OTP request. EX :  {OTPResult.Message}");
+                if (OTPResult.HasError) throw new Exception($"Fail during OTP request. EX :  {OTPResult.Message}");
                 else if (!OTPResult.IsComplete) throw new TransferProcessException("等待短信验证码超时", 406);
                 //todo if need extra logic to verify is stuck in the same page
                 //}
@@ -310,12 +318,12 @@ namespace SeleniumTest.Banks
                     SleepInterval = 3
                 });
 
-                if (result.HasError || !result.IsComplete) throw new Exception($"[{param.AccountNo}] - Cannot go to OTP page. EX : {result.Message}");
+                if (result.HasError || !result.IsComplete) throw new Exception($"Cannot go to OTP page. EX : {result.Message}");
             }
             else
             {
                 result = SelectTransferType("1", "Inter");
-                if (result.HasError || !result.IsComplete) throw new Exception($"[{param.AccountNo}] - Cannot get the transfer type. EX : {result.Message}");
+                if (result.HasError || !result.IsComplete) throw new Exception($"Cannot get the transfer type. EX : {result.Message}");
             }
 
         }

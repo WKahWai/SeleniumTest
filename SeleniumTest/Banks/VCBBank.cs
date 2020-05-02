@@ -42,11 +42,11 @@ namespace SeleniumTest.Banks
             {
                 Thread.Sleep(3000);
                 result = StepLooping(new StepLoopOption((sleep) =>
-                 {
-                     logger.Debug("TransferOk" + driver.PageSource);
-                     sleep();
-                     return driver.PageSource.Contains("Transaction successful!") || driver.PageSource.Contains("Giao dịch chuyển khoản thành công! ");
-                 })
+                {
+                    logger.Debug("TransferOk" + driver.PageSource);
+                    sleep();
+                    return driver.PageSource.Contains("Transaction successful!") || driver.PageSource.Contains("Giao dịch chuyển khoản thành công! ");
+                })
                 {
                     MaxLoop = 15,
                     SleepInterval = 1
@@ -71,7 +71,7 @@ namespace SeleniumTest.Banks
 
         protected override void Login()
         {
-            socket.Clients.Client(socket.ConnectionId).Receive(JsonResponse.success(null, "System start login the bank"));
+            //socket.Clients.Client(socket.ConnectionId).Receive(JsonResponse.success(null, "System start login the bank"));
             var condition = StepLooping(new StepLoopOption((sleep) =>
             {
                 driver.Url = "https://www.vietcombank.com.vn/IBanking2020/55c3c0a782b739e063efa9d5985e2ab4/Account/Login";
@@ -123,7 +123,7 @@ namespace SeleniumTest.Banks
                         {
                             LogInfo($"Error occur during login. {message}");
                         }
-                        throw new TransferProcessException("登录失败，请确保密码或户名正确", 403);
+                        throw new TransferProcessException(message, 403);
                     }
                 })
                 {
@@ -134,7 +134,8 @@ namespace SeleniumTest.Banks
                 else return true;
             });
             if (loginListnerResult.HasError) throw new Exception(loginListnerResult.Message);
-            else if (!loginListnerResult.IsComplete) throw new TransferProcessException(lang.GetLanguage().LoginTimeout, 410);
+            else if (!loginListnerResult.IsComplete && !loginListnerResult.ForceStop) throw new TransferProcessException(lang.GetLanguage().LoginTimeout, 410);
+            else if (loginListnerResult.ForceStop) throw new Exception("Login have error");
         }
 
         private string GetCode(string url, CookieContainer cookie)
@@ -314,7 +315,7 @@ namespace SeleniumTest.Banks
                         Thread.Sleep(2000);
                         var balanceTxt = (string)driver.ToChromeDriver().ExecuteScript("return $('#LB_SoDu').text().replace('VND','').replace('','').trim(' ')");
                         double balance = double.Parse(balanceTxt);
-                        if ((balance - param.Amount) < 0) errorMsg = "Insufficient amount";
+                        if ((balance - param.Amount) < 0) errorMsg = lang.GetLanguage().InsufficientAmount;
                         return errorMsg;
                     }
                     else

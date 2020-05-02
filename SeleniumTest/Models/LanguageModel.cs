@@ -13,8 +13,8 @@ namespace SeleniumTest.Models
         public string UsernameNull { get; set; }
         public string PasswordNull { get; set; }
         public string OTPTypeWrong { get; set; }
-
         public string LoginTimeout { get; set; }
+        public string InsufficientAmount { get; set; }
 
         public static LanguageModel Default()
         {
@@ -23,7 +23,8 @@ namespace SeleniumTest.Models
                 UsernameNull = "Username is null",
                 PasswordNull = "Password is null",
                 OTPTypeWrong = "Invalid OTP",
-                LoginTimeout = "Login timeout"
+                LoginTimeout = "Login timeout",
+                InsufficientAmount = "Insufficient amount"
             };
         }
     }

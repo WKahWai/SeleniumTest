@@ -89,12 +89,12 @@ namespace SeleniumTest.Banks
                         string message = (string)driver.ToChromeDriver().ExecuteScript("return $('#divMsgErr').text().trim()");
                         if (string.IsNullOrEmpty(message))
                         {
-                            logger.Info("Have unhandled error, so the system log the page soruce to debug log");
+                            LogInfo("Have unhandled error, so the system log the page soruce to debug log");
                             logger.Debug($"Page source for account - {param.AccountNo}. {driver.PageSource}");
                         }
                         else
                         {
-                            logger.Info($"Account [{param.AccountNo}] - Error occur during login. {message}");
+                            LogInfo($"Error occur during login. {message}");
                         }
                         throw new Exception("Login failed");
                     }
@@ -122,12 +122,12 @@ namespace SeleniumTest.Banks
             {
                 driver.ToChromeDriver().ExecuteScript("$('a[title^=\"Sign Out\"]').click();");
                 Thread.Sleep(2000);
-                logger.Info($"Account [{param.AccountNo}] - Logout successful");
+                LogInfo($"Logout successful");
             }
             catch (Exception ex)
             {
-                logger.Info($"Account [{param.AccountNo}] - Logout failed");
-                logger.Error($"Account [{param.AccountNo}] - {ex.Message}");
+                LogInfo($"Logout failed");
+                LogError($"Logout failed", ex);
             }
         }
 

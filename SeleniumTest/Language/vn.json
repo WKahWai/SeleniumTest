@@ -2,5 +2,6 @@
   "UsernameNull": "Tên người dùng không thể rỗng",
   "PasswordNull": "Mật khẩu không thể rỗng",
   "OTPTypeWrong": "Loại OTP không hợp lệ",
-  "LoginTimeout": "Hết thời gian đăng nhập, giao dịch bị chấm dứt"
+  "LoginTimeout": "Hết thời gian đăng nhập, giao dịch bị chấm dứt",
+  "InsufficientAmount": "Số tiền không đủ"
 }

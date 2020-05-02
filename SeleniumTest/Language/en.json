@@ -2,5 +2,6 @@
   "UsernameNull": "Username cannot be null",
   "PasswordNull": "Password cannot be null",
   "OTPTypeWrong": "Invalid OTP type",
-  "LoginTimeout": "Your login timeout, transaction terminated"
+  "LoginTimeout": "Your login timeout, transaction terminated",
+  "InsufficientAmount": "Insufficient amount"
 }
